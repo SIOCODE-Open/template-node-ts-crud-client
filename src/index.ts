@@ -94,23 +94,47 @@ class OrganizationUnitServiceImpl implements IOrganizationUnitService {
             }
             requestUrl += `?${params.toString()}`;
         }
-        const response = await fetch(requestUrl, { headers: this._headers });
+        const response = await fetch(requestUrl, {
+            headers: this._headers,
+            credentials: "include",
+        });
+        if (!response.ok) {
+            throw new Error(
+                `[OrganizationUnitService] Failed calling GET ${requestUrl}: ${response.status} ${response.statusText}`
+            );
+        }
         return await response.json();
     }
 
     async countAll(): Promise<number> {
         const response = await fetch(
             `${this._baseUrl}/organization-unit/count`,
-            { headers: this._headers }
+            {
+                headers: this._headers,
+                credentials: "include",
+            }
         );
+        if (!response.ok) {
+            throw new Error(
+                `[OrganizationUnitService] Failed calling GET ${this._baseUrl}/organization-unit/count: ${response.status} ${response.statusText}`
+            );
+        }
         return await response.json();
     }
 
     async getById(id: string): Promise<IOrganizationUnit | null> {
         const response = await fetch(
             `${this._baseUrl}/organization-unit/${id}`,
-            { headers: this._headers }
+            {
+                headers: this._headers,
+                credentials: "include",
+            }
         );
+        if (!response.ok) {
+            throw new Error(
+                `[OrganizationUnitService] Failed calling GET ${this._baseUrl}/organization-unit/${id}: ${response.status} ${response.statusText}`
+            );
+        }
         return await response.json();
     }
 
@@ -143,7 +167,13 @@ class OrganizationUnitServiceImpl implements IOrganizationUnitService {
                 ...this._headers,
             },
             body: JSON.stringify(filter),
+            credentials: "include",
         });
+        if (!response.ok) {
+            throw new Error(
+                `[OrganizationUnitService] Failed calling POST ${requestUrl}: ${response.status} ${response.statusText}`
+            );
+        }
         return await response.json();
     }
 
@@ -157,8 +187,14 @@ class OrganizationUnitServiceImpl implements IOrganizationUnitService {
                     ...this._headers,
                 },
                 body: JSON.stringify(filter),
+                credentials: "include",
             }
         );
+        if (!response.ok) {
+            throw new Error(
+                `[OrganizationUnitService] Failed calling POST ${this._baseUrl}/organization-unit/search/count: ${response.status} ${response.statusText}`
+            );
+        }
         return await response.json();
     }
 
@@ -172,27 +208,46 @@ class OrganizationUnitServiceImpl implements IOrganizationUnitService {
                 ...this._headers,
             },
             body: JSON.stringify(newOrganizationUnit),
+            credentials: "include",
         });
+        if (!response.ok) {
+            throw new Error(
+                `[OrganizationUnitService] Failed calling POST ${this._baseUrl}/organization-unit: ${response.status} ${response.statusText}`
+            );
+        }
         return await response.json();
     }
 
     async updateName(id: string, name: string): Promise<void> {
-        const response = await fetch(`${this._baseUrl}/name/${id}`, {
+        const requestUrl = `${this._baseUrl}/organization-unit/${id}/name`;
+        const response = await fetch(requestUrl, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
                 ...this._headers,
             },
             body: JSON.stringify(name),
+            credentials: "include",
         });
-        return await response.json();
+        if (!response.ok) {
+            throw new Error(
+                `[OrganizationUnitService] Failed calling POST ${requestUrl}: ${response.status} ${response.statusText}`
+            );
+        }
     }
     async clearName(id: string): Promise<void> {
-        const response = await fetch(`${this._baseUrl}/name/${id}`, {
+        const requestUrl = `${this._baseUrl}/organization-unit/${id}/name`;
+        const response = await fetch(requestUrl, {
             method: "DELETE",
             headers: this._headers,
+            credentials: "include",
+            body: JSON.stringify(""),
         });
-        return await response.json();
+        if (!response.ok) {
+            throw new Error(
+                `[OrganizationUnitService] Failed calling DELETE ${requestUrl}: ${response.status} ${response.statusText}`
+            );
+        }
     }
     async remove(id: string): Promise<void> {
         const response = await fetch(
@@ -200,9 +255,14 @@ class OrganizationUnitServiceImpl implements IOrganizationUnitService {
             {
                 method: "DELETE",
                 headers: this._headers,
+                credentials: "include",
             }
         );
-        return await response.json();
+        if (!response.ok) {
+            throw new Error(
+                `[OrganizationUnitService] Failed calling DELETE ${this._baseUrl}/organization-unit/${id}: ${response.status} ${response.statusText}`
+            );
+        }
     }
 }
 
@@ -337,21 +397,41 @@ class EmployeeServiceImpl implements IEmployeeService {
             }
             requestUrl += `?${params.toString()}`;
         }
-        const response = await fetch(requestUrl, { headers: this._headers });
+        const response = await fetch(requestUrl, {
+            headers: this._headers,
+            credentials: "include",
+        });
+        if (!response.ok) {
+            throw new Error(
+                `[EmployeeService] Failed calling GET ${requestUrl}: ${response.status} ${response.statusText}`
+            );
+        }
         return await response.json();
     }
 
     async countAll(): Promise<number> {
         const response = await fetch(`${this._baseUrl}/employee/count`, {
             headers: this._headers,
+            credentials: "include",
         });
+        if (!response.ok) {
+            throw new Error(
+                `[EmployeeService] Failed calling GET ${this._baseUrl}/employee/count: ${response.status} ${response.statusText}`
+            );
+        }
         return await response.json();
     }
 
     async getById(id: string): Promise<IEmployee | null> {
         const response = await fetch(`${this._baseUrl}/employee/${id}`, {
             headers: this._headers,
+            credentials: "include",
         });
+        if (!response.ok) {
+            throw new Error(
+                `[EmployeeService] Failed calling GET ${this._baseUrl}/employee/${id}: ${response.status} ${response.statusText}`
+            );
+        }
         return await response.json();
     }
 
@@ -384,7 +464,13 @@ class EmployeeServiceImpl implements IEmployeeService {
                 ...this._headers,
             },
             body: JSON.stringify(filter),
+            credentials: "include",
         });
+        if (!response.ok) {
+            throw new Error(
+                `[EmployeeService] Failed calling POST ${requestUrl}: ${response.status} ${response.statusText}`
+            );
+        }
         return await response.json();
     }
 
@@ -396,7 +482,13 @@ class EmployeeServiceImpl implements IEmployeeService {
                 ...this._headers,
             },
             body: JSON.stringify(filter),
+            credentials: "include",
         });
+        if (!response.ok) {
+            throw new Error(
+                `[EmployeeService] Failed calling POST ${this._baseUrl}/employee/search/count: ${response.status} ${response.statusText}`
+            );
+        }
         return await response.json();
     }
 
@@ -408,70 +500,120 @@ class EmployeeServiceImpl implements IEmployeeService {
                 ...this._headers,
             },
             body: JSON.stringify(newEmployee),
+            credentials: "include",
         });
+        if (!response.ok) {
+            throw new Error(
+                `[EmployeeService] Failed calling POST ${this._baseUrl}/employee: ${response.status} ${response.statusText}`
+            );
+        }
         return await response.json();
     }
 
     async updateFirstName(id: string, firstName: string): Promise<void> {
-        const response = await fetch(`${this._baseUrl}/first-name/${id}`, {
+        const requestUrl = `${this._baseUrl}/employee/${id}/first-name`;
+        const response = await fetch(requestUrl, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
                 ...this._headers,
             },
             body: JSON.stringify(firstName),
+            credentials: "include",
         });
-        return await response.json();
+        if (!response.ok) {
+            throw new Error(
+                `[EmployeeService] Failed calling POST ${requestUrl}: ${response.status} ${response.statusText}`
+            );
+        }
     }
     async clearFirstName(id: string): Promise<void> {
-        const response = await fetch(`${this._baseUrl}/first-name/${id}`, {
+        const requestUrl = `${this._baseUrl}/employee/${id}/first-name`;
+        const response = await fetch(requestUrl, {
             method: "DELETE",
             headers: this._headers,
+            credentials: "include",
+            body: JSON.stringify(""),
         });
-        return await response.json();
+        if (!response.ok) {
+            throw new Error(
+                `[EmployeeService] Failed calling DELETE ${requestUrl}: ${response.status} ${response.statusText}`
+            );
+        }
     }
     async updateLastName(id: string, lastName: string): Promise<void> {
-        const response = await fetch(`${this._baseUrl}/last-name/${id}`, {
+        const requestUrl = `${this._baseUrl}/employee/${id}/last-name`;
+        const response = await fetch(requestUrl, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
                 ...this._headers,
             },
             body: JSON.stringify(lastName),
+            credentials: "include",
         });
-        return await response.json();
+        if (!response.ok) {
+            throw new Error(
+                `[EmployeeService] Failed calling POST ${requestUrl}: ${response.status} ${response.statusText}`
+            );
+        }
     }
     async clearLastName(id: string): Promise<void> {
-        const response = await fetch(`${this._baseUrl}/last-name/${id}`, {
+        const requestUrl = `${this._baseUrl}/employee/${id}/last-name`;
+        const response = await fetch(requestUrl, {
             method: "DELETE",
             headers: this._headers,
+            credentials: "include",
+            body: JSON.stringify(""),
         });
-        return await response.json();
+        if (!response.ok) {
+            throw new Error(
+                `[EmployeeService] Failed calling DELETE ${requestUrl}: ${response.status} ${response.statusText}`
+            );
+        }
     }
     async updateOrgUnit(id: string, orgUnit: string): Promise<void> {
-        const response = await fetch(`${this._baseUrl}/org-unit/${id}`, {
+        const requestUrl = `${this._baseUrl}/employee/${id}/org-unit`;
+        const response = await fetch(requestUrl, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
                 ...this._headers,
             },
             body: JSON.stringify(orgUnit),
+            credentials: "include",
         });
-        return await response.json();
+        if (!response.ok) {
+            throw new Error(
+                `[EmployeeService] Failed calling POST ${requestUrl}: ${response.status} ${response.statusText}`
+            );
+        }
     }
     async clearOrgUnit(id: string): Promise<void> {
-        const response = await fetch(`${this._baseUrl}/org-unit/${id}`, {
+        const requestUrl = `${this._baseUrl}/employee/${id}/org-unit`;
+        const response = await fetch(requestUrl, {
             method: "DELETE",
             headers: this._headers,
+            credentials: "include",
+            body: JSON.stringify(""),
         });
-        return await response.json();
+        if (!response.ok) {
+            throw new Error(
+                `[EmployeeService] Failed calling DELETE ${requestUrl}: ${response.status} ${response.statusText}`
+            );
+        }
     }
     async remove(id: string): Promise<void> {
         const response = await fetch(`${this._baseUrl}/employee/${id}`, {
             method: "DELETE",
             headers: this._headers,
+            credentials: "include",
         });
-        return await response.json();
+        if (!response.ok) {
+            throw new Error(
+                `[EmployeeService] Failed calling DELETE ${this._baseUrl}/employee/${id}: ${response.status} ${response.statusText}`
+            );
+        }
     }
 }
 

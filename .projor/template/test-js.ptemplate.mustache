@@ -1,0 +1,424 @@
+{
+    "map": {
+        "entities": "entities"
+    },
+    "filename": "test/index.test.js",
+    "formatUsing": "babel"
+}
+---
+const client = require('../lib/index');
+const { expect } = require('chai');
+
+function randomString(length = 10) {
+    return Math.random().toString(36).substring(2, 2 + length);
+}
+
+function randomInteger(min = 0, max = 1000) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function randomBoolean() {
+    return Math.random() >= 0.5;
+}
+
+function randomFloat(min = 0, max = 1000) {
+    return Math.random() * (max - min) + min;
+}
+
+function randomDouble(min = 0, max = 1000) {
+    return Math.random() * (max - min) + min;
+}
+
+describe(
+    '{{capitalCase $.name}} Tests', () => {
+
+        const backendUrl = process.env.{{constantCase $.name}}_TEST_BACKEND_URL || 'http://localhost:8080/{{kebabCase $.apiName}}/v1';
+        const authLoginName = process.env.{{constantCase $.name}}_TEST_AUTH_LOGIN_NAME || 'admin';
+        const authLoginPassword = process.env.{{constantCase $.name}}_TEST_AUTH_LOGIN_PASSWORD || 'admin';
+        const authJwtToken = process.env.{{constantCase $.name}}_TEST_AUTH_JWT_TOKEN || null;
+        
+        {{#each entities}}
+        describe(
+            '{{capitalCase name}} Service Tests (/{{kebabCase ../$.apiName}}/v1/{{kebabCase name}})',
+            () => {
+
+                var authToken = null;
+
+                const doLogin = async () => {
+
+                    if(authJwtToken) {
+                        authToken = authJwtToken;
+                        console.log('Using JWT token from configuration for authentication, skipping login ...');
+                        return authToken;
+                    }
+
+                    try {
+                        const loginResponse = await fetch(
+                            `${backendUrl}/auth/login`,
+                            {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    loginName: authLoginName,
+                                    password: authLoginPassword
+                                })
+                            }
+                        );
+                        if (!loginResponse.ok) {
+                            throw new Error("Cannot run tests: login endpoint returned status " + loginResponse.status + " " + loginResponse.statusText);
+                        }
+                        // Token is raw the body
+                        authToken = await loginResponse.text();
+                        return authToken;
+                    } catch (error) {
+                        const isConnRefused = error.message.includes('ECONNREFUSED');
+                        if (isConnRefused) {
+                            throw new Error([error], "Cannot run tests: connection refused. Is the backend running?");
+                        }
+                        throw new AggregateError([error], "Cannot run tests: login failed with error " + error.message);
+                    }
+                }
+
+                const createService = async () => {
+                    const token = await doLogin();
+                    return client.create{{pascalCase name}}Service(backendUrl, {
+                        Authorization: `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    });
+                };
+
+                it(
+                    "GET / (no opts)",
+                    async () => {
+                        const service = await createService();
+                        const list = await service.listAll();
+                        expect(list).to.be.an('array');
+                    }
+                );
+
+                it(
+                    "GET / (with opts)",
+                    async () => {
+                        const service = await createService();
+                        const list = await service.listAll({
+                            offset: 10,
+                            limit: 10,
+                            sort: 'id__desc'
+                        });
+                        expect(list).to.be.an('array');
+                        expect(list.length).to.be.lessThanOrEqual(10);
+                    }
+                );
+
+                it(
+                    "GET /count",
+                    async () => {
+                        const service = await createService();
+                        const count = await service.countAll();
+                        expect(count).to.be.greaterThanOrEqual(0);
+                    }
+                );
+
+                // New test: Create a new entity with random attributes and null associations
+                it(
+                    "POST / - create new {{capitalCase name}} with null associations",
+                    async () => {
+                        const service = await createService();
+                        const new{{pascalCase name}} = {
+                            {{#each attributes}}
+                            {{camelCase name}}: random{{pascalCase type.name}}(),
+                            {{/each}}
+                            {{#each associations}}
+                            {{camelCase name}}: null,
+                            {{/each}}
+                        };
+                        const created{{pascalCase name}} = await service.create(new{{pascalCase name}});
+                        expect(created{{pascalCase name}}).to.be.an('object');
+                        expect(created{{pascalCase name}}).to.have.property('id');
+                        {{#each attributes}}
+                        expect(created{{pascalCase ../name}}).to.have.property('{{camelCase name}}', new{{pascalCase ../name}}.{{camelCase name}});
+                        {{/each}}
+                    }
+                );
+
+                it(
+                    "GET /:id",
+                    async () => {
+                        const service = await createService();
+                        const new{{pascalCase name}} = {
+                            {{#each attributes}}
+                            {{camelCase name}}: random{{pascalCase type.name}}(),
+                            {{/each}}
+                            {{#each associations}}
+                            {{camelCase name}}: null,
+                            {{/each}}
+                        };
+                        const created{{pascalCase name}} = await service.create(new{{pascalCase name}});
+                        const id = created{{pascalCase name}}.id;
+                        const retrieved{{pascalCase name}} = await service.getById(id);
+                        expect(retrieved{{pascalCase name}}).to.be.an('object');
+                        expect(retrieved{{pascalCase name}}).to.have.property('id', id);
+                    }
+                );
+
+                // New test: Create a new entity with random attributes and non-null associations
+                it(
+                    "POST / - create new {{capitalCase name}} with non-null associations",
+                    async () => {
+                        const service = await createService();
+
+                        // Create related entities for associations
+                        const associations = {};
+                        {{#each associations}}
+                        // Assuming the associated entity is {{pascalCase type.name}}
+                        const related{{pascalCase name}}Service = await client.create{{pascalCase type.name}}Service(backendUrl, {
+                            Authorization: `Bearer ${authToken}`
+                        });
+                        const related{{pascalCase name}} = await related{{pascalCase name}}Service.create({
+                            {{#each type.attributes}}
+                            {{camelCase name}}: random{{pascalCase type.name}}(),
+                            {{/each}}
+                        });
+                        associations['{{camelCase name}}Id'] = related{{pascalCase name}}.id;
+                        {{/each}}
+
+                        const new{{pascalCase name}} = {
+                            {{#each attributes}}
+                            {{camelCase name}}: random{{pascalCase type.name}}(),
+                            {{/each}}
+                            ...associations
+                        };
+
+                        const created{{pascalCase name}} = await service.create(new{{pascalCase name}});
+                        expect(created{{pascalCase name}}).to.be.an('object');
+                        expect(created{{pascalCase name}}).to.have.property('id');
+                        {{#each attributes}}
+                        expect(created{{pascalCase ../name}}).to.have.property('{{camelCase name}}', new{{pascalCase ../name}}.{{camelCase name}});
+                        {{/each}}
+                        {{#each associations}}
+                        expect(created{{pascalCase ../name}}).to.have.property('{{camelCase name}}Id', associations['{{camelCase name}}Id']);
+                        {{/each}}
+                    }
+                );
+
+                // New test: Update an attribute with a random value
+                {{#each attributes}}
+                it(
+                    "POST /:id/{{camelCase name}} - update attribute {{camelCase name}}",
+                    async () => {
+                        const service = await createService();
+                        // Create a new entity
+                        const new{{pascalCase ../name}} = {
+                            {{#each ../attributes}}
+                            {{camelCase name}}: random{{pascalCase type.name}}(),
+                            {{/each}}
+                            {{#each ../associations}}
+                            {{camelCase name}}Id: null,
+                            {{/each}}
+                        };
+                        const created{{pascalCase ../name}} = await service.create(new{{pascalCase ../name}});
+                        const id = created{{pascalCase ../name}}.id;
+                        // Update the attribute
+                        const updatedValue = random{{pascalCase type.name}}();
+                        await service.update{{pascalCase name}}(id, updatedValue); // Returns Promise<void>
+                        // Retrieve and verify the updated entity
+                        const updated{{pascalCase ../name}} = await service.getById(id);
+                        expect(updated{{pascalCase ../name}}).to.have.property('{{camelCase name}}', updatedValue);
+                    }
+                );
+                {{/each}}
+
+                // New test: Clear an attribute
+                {{#each attributes}}
+                it(
+                    "DELETE /:id/{{camelCase name}} - clear attribute {{camelCase name}}",
+                    async () => {
+                        const service = await createService();
+                        // Create a new entity with the attribute set
+                        const new{{pascalCase ../name}} = {
+                            {{#each ../attributes}}
+                            {{camelCase name}}: random{{pascalCase type.name}}(),
+                            {{/each}}
+                            {{#each ../associations}}
+                            {{camelCase name}}Id: null,
+                            {{/each}}
+                        };
+                        const created{{pascalCase ../name}} = await service.create(new{{pascalCase ../name}});
+                        const id = created{{pascalCase ../name}}.id;
+                        // Clear the attribute
+                        await service.clear{{pascalCase name}}(id); // Returns Promise<void>
+                        // Retrieve and verify the attribute is cleared
+                        const updated{{pascalCase ../name}} = await service.getById(id);
+                        expect(updated{{pascalCase ../name}}).to.have.property('{{camelCase name}}').that.is.null;
+                    }
+                );
+                {{/each}}
+
+                // New test: Update an association with null and non-null values
+                {{#each associations}}
+                it(
+                    "POST /:id/{{camelCase name}} - update association {{camelCase name}} with non-null value",
+                    async () => {
+                        const service = await createService();
+                        // Create related entity
+                        const related{{pascalCase name}}Service = await client.create{{pascalCase type.name}}Service(backendUrl, {
+                            Authorization: `Bearer ${authToken}`
+                        });
+                        const related{{pascalCase name}} = await related{{pascalCase name}}Service.create({
+                            {{#each type.attributes}}
+                            {{camelCase name}}: random{{pascalCase type.name}}(),
+                            {{/each}}
+                        });
+                        // Create a new entity
+                        const new{{pascalCase ../name}} = {
+                            {{#each ../attributes}}
+                            {{camelCase name}}: random{{pascalCase type.name}}(),
+                            {{/each}}
+                            {{camelCase name}}Id: null
+                        };
+                        const created{{pascalCase ../name}} = await service.create(new{{pascalCase ../name}});
+                        const id = created{{pascalCase ../name}}.id;
+                        // Update the association
+                        await service.update{{pascalCase name}}(id, related{{pascalCase name}}.id); // Returns Promise<void>
+                        // Retrieve and verify the updated entity
+                        const updated{{pascalCase ../name}} = await service.getById(id);
+                        expect(updated{{pascalCase ../name}}).to.have.property('{{camelCase name}}Id', related{{pascalCase name}}.id);
+                    }
+                );
+
+                it(
+                    "DELETE /:id/{{camelCase name}} - clear association {{camelCase name}}",
+                    async () => {
+                        const service = await createService();
+                        // Create related entity
+                        const related{{pascalCase name}}Service = await client.create{{pascalCase type.name}}Service(backendUrl, {
+                            Authorization: `Bearer ${authToken}`
+                        });
+                        const related{{pascalCase name}} = await related{{pascalCase name}}Service.create({
+                            {{#each type.attributes}}
+                            {{camelCase name}}: random{{pascalCase type.name}}(),
+                            {{/each}}
+                        });
+                        // Create a new entity with the association set
+                        const new{{pascalCase ../name}} = {
+                            {{#each ../attributes}}
+                            {{camelCase name}}: random{{pascalCase type.name}}(),
+                            {{/each}}
+                            {{camelCase name}}Id: related{{pascalCase name}}.id
+                        };
+                        const created{{pascalCase ../name}} = await service.create(new{{pascalCase ../name}});
+                        const id = created{{pascalCase ../name}}.id;
+                        // Clear the association
+                        await service.clear{{pascalCase name}}(id); // Returns Promise<void>
+                        // Retrieve and verify the association is cleared
+                        const updated{{pascalCase ../name}} = await service.getById(id);
+                        expect(updated{{pascalCase ../name}}['{{camelCase name}}Id']).to.be.null;
+                    }
+                );
+                {{/each}}
+
+                // New test: Delete an entity
+                it(
+                    "DELETE /:id - remove {{capitalCase name}}",
+                    async () => {
+                        const service = await createService();
+                        // Create a new entity
+                        const new{{pascalCase name}} = {
+                            {{#each attributes}}
+                            {{camelCase name}}: random{{pascalCase type.name}}(),
+                            {{/each}}
+                            {{#each associations}}
+                            {{camelCase name}}Id: null,
+                            {{/each}}
+                        };
+                        const created{{pascalCase name}} = await service.create(new{{pascalCase name}});
+                        const id = created{{pascalCase name}}.id;
+                        // Delete the entity
+                        await service.remove(id);
+                        // Verify the entity has been deleted
+                        let error = null;
+                        try {
+                            await service.getById(id);
+                        } catch (err) {
+                            error = err;
+                        }
+                        expect(error).to.not.be.null;
+                    }
+                );
+
+                // New test: Search entities
+                it(
+                    "POST /search - search {{capitalCase name}} entities",
+                    async () => {
+                        const service = await createService();
+                        // Create a unique attribute value for testing
+                        const uniqueValue = `test-${randomString(5)}-${Date.now()}`;
+                        // Create a new entity with the unique value
+                        const new{{pascalCase name}} = {
+                            {{#each attributes}}
+                            {{camelCase name}}: {{#if @first}}uniqueValue{{else}}random{{pascalCase type.name}}(){{/if}},
+                            {{/each}}
+                            {{#each associations}}
+                            {{camelCase name}}Id: null,
+                            {{/each}}
+                        };
+                        const created{{pascalCase name}} = await service.create(new{{pascalCase name}});
+                        // Search for the entity using the unique attribute
+                        const filter = {
+                            {{#each attributes}}
+                            {{#if @first}}
+                            {{camelCase name}}: {
+                                equals: uniqueValue
+                            }
+                            {{/if}}
+                            {{/each}}
+                        };
+                        const results = await service.search(filter);
+                        expect(results).to.be.an('array');
+                        const found = results.some(e => e.id === created{{pascalCase name}}.id);
+                        expect(found).to.be.true;
+                    }
+                );
+
+                // New test: Count entities matching a filter
+                it(
+                    "POST /search/count - count {{capitalCase name}} entities matching a filter",
+                    async () => {
+                        const service = await createService();
+                        // Create a unique attribute value for testing
+                        const uniqueValue = `test-${randomString(5)}-${Date.now()}`;
+                        // Create a new entity with the unique value
+                        const new{{pascalCase name}} = {
+                            {{#each attributes}}
+                            {{camelCase name}}: {{#if @first}}uniqueValue{{else}}random{{pascalCase type.name}}(){{/if}},
+                            {{/each}}
+                            {{#each associations}}
+                            {{camelCase name}}Id: null,
+                            {{/each}}
+                        };
+                        await service.create(new{{pascalCase name}});
+                        // Count entities matching the filter
+                        const filter = {
+                            {{#each attributes}}
+                            {{#if @first}}
+                            {{camelCase name}}: {
+                                equals: uniqueValue
+                            }
+                            {{/if}}
+                            {{/each}}
+                        };
+                        const count = await service.countFor(filter);
+                        expect(count).to.be.a('number');
+                        expect(count).to.be.greaterThanOrEqual(1);
+                    }
+                );
+
+            }
+        );
+        {{/each}}
+
+    }
+);

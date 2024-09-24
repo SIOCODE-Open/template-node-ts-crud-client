@@ -9,9 +9,16 @@
     "version": "{{$.version}}",
     "private": true,
     "description": "{{{$.description}}}",
-    "main": "src/index.ts",
+    "main": "lib/index.js",
+    "types": "types/index.d.ts",
     "devDependencies": {
         "@types/node": "^22.6.1",
-        "typescript": "^5.6.2"
+        "typescript": "^5.6.2",
+        "chai": "^4.5.0",
+        "mocha": "^10.7.3"
+    },
+    "scripts": {
+        "build": "tsc",
+        "test": "mocha"
     }
 }

@@ -5,7 +5,12 @@
         "moduleResolution": "Node",
         "esModuleInterop": true,
         "skipLibCheck": true,
-        "allowSyntheticDefaultImports": true
+        "allowSyntheticDefaultImports": true,
+        "outDir": "lib",
+        "declaration": true,
+        "declarationDir": "types",
+        "sourceMap": true,
+        "declarationMap": true
     },
     "include": ["src/**/*.ts"],
     "exclude": ["node_modules"]

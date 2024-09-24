@@ -117,7 +117,7 @@ export interface I{{pascalCase name}}Service {
 class {{pascalCase name}}ServiceImpl implements I{{pascalCase name}}Service {
 
     constructor(
-        private _baseUrl: string = "http://localhost:8080/backend/v1",
+        private _baseUrl: string = "http://localhost:8080/{{kebabCase ../$.apiName}}/v1",
         private _headers: Record<string, any> = {}
     ) {}
 
@@ -138,24 +138,42 @@ class {{pascalCase name}}ServiceImpl implements I{{pascalCase name}}Service {
         }
         const response = await fetch(
             requestUrl,
-            { headers: this._headers }
+            {
+                headers: this._headers,
+                credentials: 'include'
+            }
         );
+        if (!response.ok) {
+            throw new Error(`[{{pascalCase name}}Service] Failed calling GET ${requestUrl}: ${response.status} ${response.statusText}`);
+        }
         return await response.json();
     }
 
     async countAll(): Promise<number> {
         const response = await fetch(
             `${this._baseUrl}/{{kebabCase name}}/count`,
-            { headers: this._headers }
+            {
+                headers: this._headers,
+                credentials: 'include'
+            }
         );
+        if (!response.ok) {
+            throw new Error(`[{{pascalCase name}}Service] Failed calling GET ${this._baseUrl}/{{kebabCase name}}/count: ${response.status} ${response.statusText}`);
+        }
         return await response.json();
     }
 
     async getById(id: string): Promise<I{{pascalCase name}} | null> {
         const response = await fetch(
             `${this._baseUrl}/{{kebabCase name}}/${id}`,
-            { headers: this._headers }
+            {
+                headers: this._headers,
+                credentials: 'include'
+            }
         );
+        if (!response.ok) {
+            throw new Error(`[{{pascalCase name}}Service] Failed calling GET ${this._baseUrl}/{{kebabCase name}}/${id}: ${response.status} ${response.statusText}`);
+        }
         return await response.json();
     }
 
@@ -181,8 +199,12 @@ class {{pascalCase name}}ServiceImpl implements I{{pascalCase name}}Service {
                 'Content-Type': 'application/json',
                 ...this._headers
             },
-            body: JSON.stringify(filter)
+            body: JSON.stringify(filter),
+            credentials: 'include'
         });
+        if (!response.ok) {
+            throw new Error(`[{{pascalCase name}}Service] Failed calling POST ${requestUrl}: ${response.status} ${response.statusText}`);
+        }
         return await response.json();
     }
 
@@ -193,8 +215,12 @@ class {{pascalCase name}}ServiceImpl implements I{{pascalCase name}}Service {
                 'Content-Type': 'application/json',
                 ...this._headers
             },
-            body: JSON.stringify(filter)
+            body: JSON.stringify(filter),
+            credentials: 'include'
         });
+        if (!response.ok) {
+            throw new Error(`[{{pascalCase name}}Service] Failed calling POST ${this._baseUrl}/{{kebabCase name}}/search/count: ${response.status} ${response.statusText}`);
+        }
         return await response.json();
     }
 
@@ -205,63 +231,88 @@ class {{pascalCase name}}ServiceImpl implements I{{pascalCase name}}Service {
                 'Content-Type': 'application/json',
                 ...this._headers
             },
-            body: JSON.stringify(new{{pascalCase name}})
+            body: JSON.stringify(new{{pascalCase name}}),
+            credentials: 'include'
         });
+        if (!response.ok) {
+            throw new Error(`[{{pascalCase name}}Service] Failed calling POST ${this._baseUrl}/{{kebabCase name}}: ${response.status} ${response.statusText}`);
+        }
         return await response.json();
     }
 
     {{#each attributes}}
     async update{{pascalCase name}}(id: string, {{camelCase name}}: {{{type.ts}}}): Promise<void> {
-        const response = await fetch(`${this._baseUrl}/{{kebabCase name}}/${id}`, {
+        const requestUrl = `${this._baseUrl}/{{kebabCase ../name}}/${id}/{{kebabCase name}}`;
+        const response = await fetch(requestUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 ...this._headers
             },
-            body: JSON.stringify({{camelCase name}})
+            body: JSON.stringify({{camelCase name}}),
+            credentials: 'include'
         });
-        return await response.json();
+        if (!response.ok) {
+            throw new Error(`[{{pascalCase ../name}}Service] Failed calling POST ${requestUrl}: ${response.status} ${response.statusText}`);
+        }
     }
     async clear{{pascalCase name}}(id: string): Promise<void> {
-        const response = await fetch(`${this._baseUrl}/{{kebabCase name}}/${id}`, {
+        const requestUrl = `${this._baseUrl}/{{kebabCase ../name}}/${id}/{{kebabCase name}}`;
+        const response = await fetch(requestUrl, {
             method: 'DELETE',
-            headers: this._headers
+            headers: this._headers,
+            credentials: 'include',
+            body: JSON.stringify("")
         });
-        return await response.json();
+        if (!response.ok) {
+            throw new Error(`[{{pascalCase ../name}}Service] Failed calling DELETE ${requestUrl}: ${response.status} ${response.statusText}`);
+        }
     }
     {{/each}}
     {{#each associations}}
     async update{{pascalCase name}}(id: string, {{camelCase name}}: string): Promise<void> {
-        const response = await fetch(`${this._baseUrl}/{{kebabCase name}}/${id}`, {
+        const requestUrl = `${this._baseUrl}/{{kebabCase ../name}}/${id}/{{kebabCase name}}`;
+        const response = await fetch(requestUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 ...this._headers
             },
-            body: JSON.stringify({{camelCase name}})
+            body: JSON.stringify({{camelCase name}}),
+            credentials: 'include'
         });
-        return await response.json();
+        if (!response.ok) {
+            throw new Error(`[{{pascalCase ../name}}Service] Failed calling POST ${requestUrl}: ${response.status} ${response.statusText}`);
+        }
     }
     async clear{{pascalCase name}}(id: string): Promise<void> {
-        const response = await fetch(`${this._baseUrl}/{{kebabCase name}}/${id}`, {
+        const requestUrl = `${this._baseUrl}/{{kebabCase ../name}}/${id}/{{kebabCase name}}`;
+        const response = await fetch(requestUrl, {
             method: 'DELETE',
-            headers: this._headers
+            headers: this._headers,
+            credentials: 'include',
+            body: JSON.stringify("")
         });
-        return await response.json();
+        if (!response.ok) {
+            throw new Error(`[{{pascalCase ../name}}Service] Failed calling DELETE ${requestUrl}: ${response.status} ${response.statusText}`);
+        }
     }
     {{/each}}
     async remove(id: string): Promise<void> {
         const response = await fetch(`${this._baseUrl}/{{kebabCase name}}/${id}`, {
             method: 'DELETE',
-            headers: this._headers
+            headers: this._headers,
+            credentials: 'include'
         });
-        return await response.json();
+        if (!response.ok) {
+            throw new Error(`[{{pascalCase name}}Service] Failed calling DELETE ${this._baseUrl}/{{kebabCase name}}/${id}: ${response.status} ${response.statusText}`);
+        }
     }
 
 }
 
 export function create{{pascalCase name}}Service(
-    baseUrl: string = "http://localhost:8080/backend/v1",
+    baseUrl: string = "http://localhost:8080/{{kebabCase ../$.apiName}}/v1",
     headers: Record<string, any> = {}
 ): I{{pascalCase name}}Service {
     return new {{pascalCase name}}ServiceImpl(baseUrl, headers);

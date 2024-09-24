@@ -41,6 +41,3 @@ out/
 # Git ignore for NPM
 
 node_modules/
-packages/*/dist/
-packages/*/node_modules/
-packages/*/lib/
