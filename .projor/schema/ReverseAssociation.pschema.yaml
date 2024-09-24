@@ -1,0 +1,17 @@
+id: ReverseAssociation
+name: Reverse Association
+description: A reverse association between entities
+fields:
+  - name: type
+    description: The type of the association
+    type: reference
+    references: Entity
+    required: true
+  - name: isList
+    description: Whether the association is a list
+    type: boolean
+    required: true
+  - name: mappedBy
+    description: The field on the other entity that this association is mapped by
+    type: string
+    required: true

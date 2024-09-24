@@ -1,0 +1,9 @@
+id: Association
+name: Association
+description: An association between entities
+fields:
+  - name: type
+    description: The type of the association
+    type: reference
+    references: Entity
+    required: true

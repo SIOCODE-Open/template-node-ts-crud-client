@@ -1,0 +1,47 @@
+id: filters
+name: Attribute Filters
+description: The supported filters for attributes
+schema: AttributeFilter
+objects:
+  - name: equals
+    description: Filter for equality
+    isList: false
+  - name: notEquals
+    description: Filter for inequality
+    isList: false
+  - name: greaterThan
+    description: Filter for greater than
+    isList: false
+  - name: lessThan
+    description: Filter for less than
+    isList: false
+  - name: greaterThanOrEquals
+    description: Filter for greater than or equal to
+    isList: false
+  - name: lessThanOrEquals
+    description: Filter for less than or equal to
+    isList: false
+  - name: in
+    description: Filter for inclusion in a list
+    isList: true
+  - name: notIn
+    description: Filter for exclusion from a list
+    isList: true
+  - name: contains
+    description: Filter for containment
+    isList: false
+  - name: notContains
+    description: Filter for non-containment
+    isList: false
+  - name: startsWith
+    description: Filter for starting with
+    isList: false
+  - name: notStartsWith
+    description: Filter for not starting with
+    isList: false
+  - name: endsWith
+    description: Filter for ending with
+    isList: false
+  - name: notEndsWith
+    description: Filter for not ending with
+    isList: false

@@ -1,0 +1,270 @@
+{
+    "map": {
+        "entities": "entities"
+    },
+    "filename": "src/index.ts",
+    "formatUsing": "typescript"
+}
+---
+{{#each entities}}
+/** {{{description}}} */
+export interface I{{pascalCase name}} {
+    /** The unique identifier for this {{capitalCase name}} */
+    id: string;
+
+    {{#each attributes}}
+    /** {{{description}}} */
+    {{camelCase name}}: {{{type.ts}}};
+
+    {{/each}}
+
+    {{#each associations}}
+    /** {{{description}}} */
+    {{camelCase name}}: string;
+
+    {{/each}}
+}
+
+/** DTO for a new {{capitalCase name}} */
+export interface INew{{pascalCase name}} {
+    {{#each attributes}}
+    /** {{{description}}} */
+    {{camelCase name}}?: {{{type.ts}}} | null;
+
+    {{/each}}
+
+    {{#each associations}}
+    /** {{{description}}} */
+    {{camelCase name}}?: string | null;
+
+    {{/each}}
+}
+
+/** DTO for filtering {{capitalCase name}} objects */
+export interface I{{pascalCase name}}Filter {
+    and?: Array<I{{pascalCase name}}Filter>;
+    or?: Array<I{{pascalCase name}}Filter>;
+    not?: I{{pascalCase name}}Filter;
+    {{#each attributes}}
+    {{#if type.attributeFilters}}
+    {{camelCase name}}?: {
+        {{#each type.attributeFilters}}
+        {{#unless isList}}
+        {{camelCase name}}?: {{{../type.ts}}};
+        {{/unless}}
+        {{#if isList}}
+        {{camelCase name}}?: Array<{{{../type.ts}}}>;
+        {{/if}}
+        {{/each}}
+    }
+    {{/if}}
+    {{/each}}
+    {{#each associations}}
+    {{#if type.attributeFilters}}
+    {{camelCase name}}?: {
+        equals?: string;
+        notEquals?: string;
+        in?: Array<string>;
+        notIn?: Array<string>;
+    }
+    {{/if}}
+    {{/each}}
+    id?: {
+        equals?: string;
+        notEquals?: string;
+        in?: Array<string>;
+        notIn?: Array<string>;
+    }
+}
+
+export type I{{pascalCase name}}Sort = "id__asc" | "id__desc"{{#if attributes}} | {{/if}}
+    {{#each attributes}}
+    "{{camelCase name}}_asc" | "{{camelCase name}}_desc"{{#unless @last}} | {{/unless}}
+    {{/each}}
+    ;
+
+export interface I{{pascalCase name}}Service {
+    listAll(
+        opts?: {
+            offset: number;
+            limit: number;
+            sort: I{{pascalCase name}}Sort;
+        }
+    ): Promise<Array<I{{pascalCase name}}>>;
+    getById(id: string): Promise<I{{pascalCase name}} | null>;
+    countAll(): Promise<number>;
+    search(
+        filter: I{{pascalCase name}}Filter,
+        opts?: {
+            offset: number;
+            limit: number;
+            sort: I{{pascalCase name}}Sort;
+        }
+    );
+    countFor(filter: I{{pascalCase name}}Filter): Promise<number>;
+    create(new{{pascalCase name}}: INew{{pascalCase name}}): Promise<I{{pascalCase name}}>;
+    {{#each attributes}}
+    update{{pascalCase name}}(id: string, {{camelCase name}}: {{{type.ts}}}): Promise<void>;
+    clear{{pascalCase name}}(id: string): Promise<void>;
+    {{/each}}
+    {{#each associations}}
+    update{{pascalCase name}}(id: string, {{camelCase name}}: string): Promise<void>;
+    clear{{pascalCase name}}(id: string): Promise<void>;
+    {{/each}}
+    remove(id: string): Promise<void>;
+}
+
+class {{pascalCase name}}ServiceImpl implements I{{pascalCase name}}Service {
+
+    constructor(
+        private _baseUrl: string = "http://localhost:8080/backend/v1",
+        private _headers: Record<string, any> = {}
+    ) {}
+
+    async listAll(
+        opts?: {
+            offset: number;
+            limit: number;
+            sort: I{{pascalCase name}}Sort;
+        }
+    ): Promise<Array<I{{pascalCase name}}>> {
+        let requestUrl = `${this._baseUrl}/{{kebabCase name}}`;
+        if (opts) {
+            const params = new URLSearchParams();
+            if (opts.offset) { params.append('offset', opts.offset.toString()); }
+            if (opts.limit) { params.append('limit', opts.limit.toString()); }
+            if (opts.sort) { params.append('sort', opts.sort); }
+            requestUrl += `?${params.toString()}`;
+        }
+        const response = await fetch(
+            requestUrl,
+            { headers: this._headers }
+        );
+        return await response.json();
+    }
+
+    async countAll(): Promise<number> {
+        const response = await fetch(
+            `${this._baseUrl}/{{kebabCase name}}/count`,
+            { headers: this._headers }
+        );
+        return await response.json();
+    }
+
+    async getById(id: string): Promise<I{{pascalCase name}} | null> {
+        const response = await fetch(
+            `${this._baseUrl}/{{kebabCase name}}/${id}`,
+            { headers: this._headers }
+        );
+        return await response.json();
+    }
+
+    async search(
+        filter: I{{pascalCase name}}Filter,
+        opts?: {
+            offset: number;
+            limit: number;
+            sort: I{{pascalCase name}}Sort;
+        }
+    ) {
+        let requestUrl = `${this._baseUrl}/{{kebabCase name}}/search`;
+        if (opts) {
+            const params = new URLSearchParams();
+            if (opts.offset) { params.append('offset', opts.offset.toString()); }
+            if (opts.limit) { params.append('limit', opts.limit.toString()); }
+            if (opts.sort) { params.append('sort', opts.sort); }
+            requestUrl += `?${params.toString()}`;
+        }
+        const response = await fetch(requestUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...this._headers
+            },
+            body: JSON.stringify(filter)
+        });
+        return await response.json();
+    }
+
+    async countFor(filter: I{{pascalCase name}}Filter): Promise<number> {
+        const response = await fetch(`${this._baseUrl}/{{kebabCase name}}/search/count`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...this._headers
+            },
+            body: JSON.stringify(filter)
+        });
+        return await response.json();
+    }
+
+    async create(new{{pascalCase name}}: INew{{pascalCase name}}): Promise<I{{pascalCase name}}> {
+        const response = await fetch(`${this._baseUrl}/{{kebabCase name}}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...this._headers
+            },
+            body: JSON.stringify(new{{pascalCase name}})
+        });
+        return await response.json();
+    }
+
+    {{#each attributes}}
+    async update{{pascalCase name}}(id: string, {{camelCase name}}: {{{type.ts}}}): Promise<void> {
+        const response = await fetch(`${this._baseUrl}/{{kebabCase name}}/${id}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...this._headers
+            },
+            body: JSON.stringify({{camelCase name}})
+        });
+        return await response.json();
+    }
+    async clear{{pascalCase name}}(id: string): Promise<void> {
+        const response = await fetch(`${this._baseUrl}/{{kebabCase name}}/${id}`, {
+            method: 'DELETE',
+            headers: this._headers
+        });
+        return await response.json();
+    }
+    {{/each}}
+    {{#each associations}}
+    async update{{pascalCase name}}(id: string, {{camelCase name}}: string): Promise<void> {
+        const response = await fetch(`${this._baseUrl}/{{kebabCase name}}/${id}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...this._headers
+            },
+            body: JSON.stringify({{camelCase name}})
+        });
+        return await response.json();
+    }
+    async clear{{pascalCase name}}(id: string): Promise<void> {
+        const response = await fetch(`${this._baseUrl}/{{kebabCase name}}/${id}`, {
+            method: 'DELETE',
+            headers: this._headers
+        });
+        return await response.json();
+    }
+    {{/each}}
+    async remove(id: string): Promise<void> {
+        const response = await fetch(`${this._baseUrl}/{{kebabCase name}}/${id}`, {
+            method: 'DELETE',
+            headers: this._headers
+        });
+        return await response.json();
+    }
+
+}
+
+export function create{{pascalCase name}}Service(
+    baseUrl: string = "http://localhost:8080/backend/v1",
+    headers: Record<string, any> = {}
+): I{{pascalCase name}}Service {
+    return new {{pascalCase name}}ServiceImpl(baseUrl, headers);
+}
+
+{{/each}}

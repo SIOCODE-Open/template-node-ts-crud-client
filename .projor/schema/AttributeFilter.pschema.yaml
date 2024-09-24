@@ -1,0 +1,7 @@
+id: AttributeFilter
+name: Attribute Filter
+description: A possible filter for an attribute
+fields:
+  - name: isList
+    description: Whether the filter takes a list of values
+    type: boolean

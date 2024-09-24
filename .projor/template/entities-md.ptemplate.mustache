@@ -1,0 +1,40 @@
+{
+    "map": {
+        "entities": "entities"
+    },
+    "filename": "ENTITIES.md"
+}
+---
+{{#each entities}}
+# {{capitalCase name}}
+
+{{{description}}}
+
+{{#if attributes}}
+_Attributes_
+
+{{#each attributes}}
+* {{capitalCase name}} : `{{type.name}}`{{#if description}} - {{{description}}}{{/if}}
+{{/each}}
+
+{{/if}}
+
+{{#if associations}}
+_Associations_
+
+{{#each associations}}
+* {{capitalCase name}} : `{{capitalCase type.name}}`{{#if description}} - {{{description}}}{{/if}}
+{{/each}}
+
+{{/if}}
+
+{{#if reverseAssociations}}
+_Reverse Associations_
+
+{{#each reverseAssociations}}
+* {{capitalCase name}} : `{{#if isList}}[]{{/if}}{{capitalCase type.name}}` (mapped by `{{capitalCase type.name}} :: {{capitalCase mappedBy}}`){{#if description}} - {{{description}}}{{/if}}
+{{/each}}
+
+{{/if}}
+
+{{/each}}

@@ -1,0 +1,72 @@
+id: basic
+name: Basic Types
+description: The basic types
+schema: BasicType
+objects:
+  - name: String
+    description: A string
+    java: java.lang.String
+    jsonExample: '"string"'
+    jsDocType: string
+    ts: string
+    attributeFilters:
+      - filters#equals
+      - filters#notEquals
+      - filters#in
+      - filters#notIn
+      - filters#contains
+      - filters#notContains
+      - filters#startsWith
+      - filters#notStartsWith
+      - filters#endsWith
+      - filters#notEndsWith
+  - name: Integer
+    description: An integer
+    java: java.lang.Integer
+    jsonExample: "42"
+    jsDocType: number
+    ts: number
+    attributeFilters:
+      - filters#equals
+      - filters#notEquals
+      - filters#greaterThan
+      - filters#lessThan
+      - filters#greaterThanOrEquals
+      - filters#lessThanOrEquals
+      - filters#in
+      - filters#notIn
+  - name: Float
+    description: A floating-point number
+    java: java.lang.Float
+    jsonExample: "3.14"
+    jsDocType: number
+    ts: number
+    attributeFilters:
+      - filters#equals
+      - filters#notEquals
+      - filters#greaterThan
+      - filters#lessThan
+      - filters#greaterThanOrEquals
+      - filters#lessThanOrEquals
+  - name: Double
+    description: A double-precision floating-point number
+    java: java.lang.Double
+    jsonExample: "3.14159"
+    jsDocType: number
+    ts: number
+    attributeFilters:
+      - filters#equals
+      - filters#notEquals
+      - filters#greaterThan
+      - filters#lessThan
+      - filters#greaterThanOrEquals
+      - filters#lessThanOrEquals
+  - name: Boolean
+    description: A boolean
+    java: java.lang.Boolean
+    jsonExample: "true"
+    jsDocType: boolean
+    ts: boolean
+    attributeFilters:
+      - filters#equals
+      - filters#notEquals

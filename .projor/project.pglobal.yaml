@@ -1,0 +1,4 @@
+scope: example
+name: backend-client-node
+version: 0.0.1
+description: _You can edit this description in [`.projor/project.pglobal.yaml`](.projor/project.pglobal.yaml)_

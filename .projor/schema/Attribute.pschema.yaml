@@ -1,0 +1,12 @@
+id: Attribute
+name: Attribute
+description: An attribute of an entity
+fields:
+  - name: type
+    description: The type of the attribute
+    type: reference
+    references: BasicType
+    required: true
+  - name: masked
+    description: Whether the attribute is masked
+    type: boolean
