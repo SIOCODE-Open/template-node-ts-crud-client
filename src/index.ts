@@ -41,8 +41,8 @@ export interface IOrganizationUnitFilter {
 export type IOrganizationUnitSort =
     | "id__asc"
     | "id__desc"
-    | "name_asc"
-    | "name_desc";
+    | "name__asc"
+    | "name__desc";
 
 export interface IOrganizationUnitService {
     listAll(opts?: {
@@ -280,10 +280,10 @@ export interface IEmployeeFilter {
 export type IEmployeeSort =
     | "id__asc"
     | "id__desc"
-    | "firstName_asc"
-    | "firstName_desc"
-    | "lastName_asc"
-    | "lastName_desc";
+    | "firstName__asc"
+    | "firstName__desc"
+    | "lastName__asc"
+    | "lastName__desc";
 
 export interface IEmployeeService {
     listAll(opts?: {

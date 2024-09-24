@@ -79,7 +79,7 @@ export interface I{{pascalCase name}}Filter {
 
 export type I{{pascalCase name}}Sort = "id__asc" | "id__desc"{{#if attributes}} | {{/if}}
     {{#each attributes}}
-    "{{camelCase name}}_asc" | "{{camelCase name}}_desc"{{#unless @last}} | {{/unless}}
+    "{{camelCase name}}__asc" | "{{camelCase name}}__desc"{{#unless @last}} | {{/unless}}
     {{/each}}
     ;
 
