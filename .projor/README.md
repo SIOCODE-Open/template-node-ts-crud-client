@@ -47,6 +47,16 @@ npm test
 
 * Whenever you want to _modify how the code is generated_, you should edit the templates in [template](template/), and run `projor generate` again.
 
+## Further customization
+
+In the [`project.pglobal.yaml`](project.pglobal.yaml) file, you can further customize the generated code:
+
+* `scope` - The generated client library is always named `@SCOPE/NAME`. This is set to `example` by default, so the library is named `@example/NAME`.
+* `name` - The name of the generated client library. This is set to `backend-client-node` by default, so the library is named `@example/backend-client-node`.
+* `apiName` - The name of the API, that was set in the backend template. API routes are built using format `/API_NAME/v1/ENTITY_NAME`.
+* `version` - The version number, which will be included in the generated `package.json`.
+* `description` - The description of the library, which will be included in the generated `package.json`, and the `README.md`.
+
 ## How it works
 
 * This template uses the [`entities.plang.js`](language/entities.plang.js) script to define a _[domain specific language](https://docs.projor.io/overview/languages.html)_ for defining entities.
