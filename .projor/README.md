@@ -1,4 +1,4 @@
-# ProJor Spring Boot CRUD (+ authentication) Template
+# ProJor TypeScript Node.JS Client Library Template
 
 This is a [ProJor](https://projor.io) template, that generates a _TypeScript Node.JS Client Library_ for the input entities.
 
@@ -30,8 +30,21 @@ entity Employee {
 projor generate
 ```
 
-* After that, the client library is ready for use.
-* Whenever you want to _modify how the code is generataed_, you should edit the templates in [template](template/), and run `projor generate` again.
+* Now you can build the library into CommonJS and TypeScript declaration files:
+
+```bash
+npm run build
+```
+
+* After that, you should start a new backend (generated for example from [template-spring-boot-crud](https://github.com/SIOCODE-Open/template-spring-boot-crud))
+
+* Now you can run the tests of the library:
+
+```bash
+npm test
+```
+
+* Whenever you want to _modify how the code is generated_, you should edit the templates in [template](template/), and run `projor generate` again.
 
 ## How it works
 
