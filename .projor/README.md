@@ -33,6 +33,7 @@ projor generate
 * Now you can build the library into CommonJS and TypeScript declaration files:
 
 ```bash
+npm install
 npm run build
 ```
 
