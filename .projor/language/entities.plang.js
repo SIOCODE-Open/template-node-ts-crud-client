@@ -29,13 +29,13 @@ async function parseAllEntitiesFiles(files) {
             ],
         },
     ];
-
+    
     // Helper functions
     function extractWithinBrackets(text, startIndex, openChar, closeChar) {
         let content = "";
         let bracketCount = 0;
         let foundStart = false;
-
+    
         for (let i = startIndex; i < text.length; i++) {
             let char = text[i];
             if (!foundStart) {
@@ -57,7 +57,90 @@ async function parseAllEntitiesFiles(files) {
         }
         return null; // No matching closing bracket found
     }
-
+    
+    function extractExpressionDetails(
+        inputText,
+        currentIndex,
+        currentLineEndIndex
+    ) {
+        let annotation = "";
+        let generic = "";
+        let arguments = "";
+        let nextSquareBracketIndex = inputText.indexOf("[", currentIndex);
+        let nextLessThanIndex = inputText.indexOf("<", currentIndex);
+        let nextOpenParenthesisIndex = inputText.indexOf("(", currentIndex);
+    
+        if (
+            nextSquareBracketIndex !== -1 &&
+            (nextSquareBracketIndex < currentLineEndIndex ||
+                currentLineEndIndex === -1) &&
+            (nextSquareBracketIndex < nextLessThanIndex ||
+                nextLessThanIndex === -1) &&
+            (nextSquareBracketIndex < nextOpenParenthesisIndex ||
+                nextOpenParenthesisIndex === -1)
+        ) {
+            const annotationContent = extractWithinBrackets(
+                inputText,
+                nextSquareBracketIndex,
+                "[",
+                "]"
+            );
+            annotation = annotationContent.content;
+    
+            if (annotation.includes("<")) {
+                nextLessThanIndex = inputText.indexOf(
+                    "<",
+                    annotationContent.endIndex
+                );
+            }
+            if (annotation.includes("(")) {
+                nextOpenParenthesisIndex = inputText.indexOf(
+                    "(",
+                    annotationContent.endIndex
+                );
+            }
+        }
+    
+        if (
+            nextLessThanIndex !== -1 &&
+            (nextLessThanIndex < currentLineEndIndex ||
+                currentLineEndIndex === -1) &&
+            (nextLessThanIndex < nextOpenParenthesisIndex ||
+                nextOpenParenthesisIndex === -1)
+        ) {
+            const genericContent = extractWithinBrackets(
+                inputText,
+                nextLessThanIndex,
+                "<",
+                ">"
+            );
+            generic = genericContent.content;
+    
+            if (generic.includes("(")) {
+                nextOpenParenthesisIndex = inputText.indexOf(
+                    "(",
+                    genericContent.endIndex
+                );
+            }
+        }
+    
+        if (
+            nextOpenParenthesisIndex !== -1 &&
+            (nextOpenParenthesisIndex < currentLineEndIndex ||
+                currentLineEndIndex === -1)
+        ) {
+            const argumentsContent = extractWithinBrackets(
+                inputText,
+                nextOpenParenthesisIndex,
+                "(",
+                ")"
+            );
+            arguments = argumentsContent.content;
+        }
+    
+        return { annotation, generic, arguments };
+    }
+    
     function parse(inputText, topLevelElements = TOP_LEVEL_ELEMENTS) {
         // There are 4 fundamental structures to parse:
         // type: block
@@ -96,7 +179,7 @@ async function parseAllEntitiesFiles(files) {
         //   POSTKEYWORD is always a single word, or some words. The list of valid keywords is known and fixed.
         //   POST is any text, up to the end of the line.
         // Comments: Line comments are supported. Any line beginning with '//' is considered a comment. The element starting after one or more comments receives the comment, so it is available for parsing.
-
+    
         // The parser works like this:
         //   We have a comment buffer, which is [] by default.
         //   We have a context (stack), which is created from the top-level elements by default
@@ -158,11 +241,11 @@ async function parseAllEntitiesFiles(files) {
         //     We ignore the line
         //   In case of unknown lines ...
         //     We ignore the line
-
+    
         let currentIndex = 0;
         let commentBuffer = [];
         let results = [];
-
+    
         while (currentIndex < inputText.length) {
             const currentLineEndIndex = inputText.indexOf("\n", currentIndex);
             if (currentIndex === currentLineEndIndex) {
@@ -179,7 +262,7 @@ async function parseAllEntitiesFiles(files) {
                         : currentLineEndIndex
                 )
                 .trim();
-
+    
             // Check for comments
             if (currentLine.startsWith("//")) {
                 commentBuffer.push(currentLine.substring(2).trim());
@@ -187,15 +270,15 @@ async function parseAllEntitiesFiles(files) {
                 currentIndex = currentLineEndIndex + 1;
                 continue;
             }
-
+    
             const item = { type: "Unknown" };
-
+    
             // Try to match a top level element
             let matched = false;
-
+    
             for (let topLevelElement of topLevelElements) {
                 const isThisElement = new RegExp(
-                    `^\\s*${topLevelElement.keyword}\\s+`
+                    `^\\s*${topLevelElement.keyword}\\s*`
                 ).test(currentLine);
                 if (!matched && isThisElement) {
                     if (topLevelElement.type === "block") {
@@ -215,94 +298,42 @@ async function parseAllEntitiesFiles(files) {
                             "{",
                             "}"
                         );
-
+    
                         // We should now find the name from the current line
                         const nameMatch = currentLine.match(
                             new RegExp(
-                                `\\s*${topLevelElement.keyword}\\s+([a-zA-Z0-9_\\-#\\. ]+)(?:[\\[\\(<{])`
+                                `\\s*${topLevelElement.keyword}\\s*([a-zA-Z0-9_\\-#\\. /:]+)(?:[\\[\\(<{])`
                             )
                         );
                         const name = nameMatch ? nameMatch[1] : null;
-
-                        // Now let's see if the block has annotations
-                        // We need to check between currentIndex and blockStartIndex, whether there's a '[' character
-                        // If there is, we should extract the annotation
-                        let annotation = "";
-                        const nextSquareBracketIndex = inputText.indexOf(
-                            "[",
-                            currentIndex
-                        );
-                        if (
-                            nextSquareBracketIndex !== -1 &&
-                            nextSquareBracketIndex < blockStartIndex
-                        ) {
-                            const annotationContent = extractWithinBrackets(
+    
+                        let { annotation, generic, arguments } =
+                            extractExpressionDetails(
                                 inputText,
-                                nextSquareBracketIndex,
-                                "[",
-                                "]"
+                                currentIndex,
+                                currentLineEndIndex
                             );
-                            annotation = annotationContent.content;
-                        }
-
-                        // Extract generics
-                        let generic = "";
-                        const nextLessThanIndex = inputText.indexOf(
-                            "<",
-                            currentIndex
-                        );
-                        if (
-                            nextLessThanIndex !== -1 &&
-                            nextLessThanIndex < blockStartIndex
-                        ) {
-                            const genericContent = extractWithinBrackets(
-                                inputText,
-                                nextLessThanIndex,
-                                "<",
-                                ">"
-                            );
-                            generic = genericContent.content;
-                        }
-
-                        // Extract arguments
-                        let arguments = "";
-                        const nextOpenParenthesisIndex = inputText.indexOf(
-                            "(",
-                            currentIndex
-                        );
-                        if (
-                            nextOpenParenthesisIndex !== -1 &&
-                            nextOpenParenthesisIndex < blockStartIndex
-                        ) {
-                            const argumentsContent = extractWithinBrackets(
-                                inputText,
-                                nextOpenParenthesisIndex,
-                                "(",
-                                ")"
-                            );
-                            arguments = argumentsContent.content;
-                        }
-
+    
                         // Now we parse the content
                         const parsedBlockContent = parse(
                             blockContent.content,
                             topLevelElement.content || []
                         );
-
+    
                         item.type = topLevelElement.name;
                         item.name = name.trim();
                         item.annotation = annotation.trim();
                         item.generic = generic.trim();
                         item.arguments = arguments.trim();
                         item.content = parsedBlockContent;
-
+    
                         item.comment = commentBuffer.join("\n");
                         commentBuffer = [];
-
+    
                         // Add item to results
                         results.push(item);
                         matched = true;
-
+    
                         // Now we move to the line after the block
                         currentIndex = blockContent.endIndex + 1;
                     } else if (topLevelElement.type === "property") {
@@ -310,13 +341,13 @@ async function parseAllEntitiesFiles(files) {
                         item.value = currentLine
                             .substring(topLevelElement.keyword.length)
                             .trim();
-
+    
                         item.comment = commentBuffer.join("\n");
                         commentBuffer = [];
-
+    
                         results.push(item);
                         matched = true;
-
+    
                         // Move to next line
                         if (currentLineEndIndex === -1) {
                             // End of input
@@ -328,99 +359,46 @@ async function parseAllEntitiesFiles(files) {
                         // We should now find the name from the current line
                         const nameMatch = currentLine.match(
                             new RegExp(
-                                `\\s*${topLevelElement.keyword}\\s+([a-zA-Z0-9_\\-#\\. ]+)(?:[\\[\\(<{])`
+                                `\\s*${topLevelElement.keyword}\\s*([a-zA-Z0-9_\\-#\\. /:]+)(?:[\\[\\(<{])`
                             )
                         );
                         const name = nameMatch ? nameMatch[1] : null;
-
-                        // Now let's see if the declaration has annotations in the current line
-                        // We need to check between currentIndex and currentLineEndIndex, whether there's a '[' character
-                        // If there is, we should extract the annotation
-                        let annotation = "";
-                        const nextSquareBracketIndex = inputText.indexOf(
-                            "[",
-                            currentIndex
-                        );
-                        if (
-                            nextSquareBracketIndex !== -1 &&
-                            (nextSquareBracketIndex < currentLineEndIndex ||
-                                currentLineEndIndex === -1)
-                        ) {
-                            const annotationContent = extractWithinBrackets(
+    
+                        let { annotation, generic, arguments } =
+                            extractExpressionDetails(
                                 inputText,
-                                nextSquareBracketIndex,
-                                "[",
-                                "]"
+                                currentIndex,
+                                currentLineEndIndex
                             );
-                            annotation = annotationContent.content;
-                        }
-
-                        // Extract generics
-                        let generic = "";
-                        const nextLessThanIndex = inputText.indexOf(
-                            "<",
-                            currentIndex
-                        );
-                        if (
-                            nextLessThanIndex !== -1 &&
-                            (nextLessThanIndex < currentLineEndIndex ||
-                                currentLineEndIndex === -1)
-                        ) {
-                            const genericContent = extractWithinBrackets(
-                                inputText,
-                                nextLessThanIndex,
-                                "<",
-                                ">"
+    
+                        if (topLevelElement.postkeyword) {
+                            // See if it has a postkeyword
+                            const postkeywordMatch = currentLine.match(
+                                new RegExp(`\\s*${topLevelElement.postkeyword}\\s+`)
                             );
-                            generic = genericContent.content;
-                        }
-
-                        // Extract arguments
-                        let arguments = "";
-                        const nextOpenParenthesisIndex = inputText.indexOf(
-                            "(",
-                            currentIndex
-                        );
-                        if (
-                            nextOpenParenthesisIndex !== -1 &&
-                            (nextOpenParenthesisIndex < currentLineEndIndex ||
-                                currentLineEndIndex === -1)
-                        ) {
-                            const argumentsContent = extractWithinBrackets(
-                                inputText,
-                                nextOpenParenthesisIndex,
-                                "(",
-                                ")"
-                            );
-                            arguments = argumentsContent.content;
-                        }
-
-                        // See if it has a postkeyword
-                        const postkeywordMatch = currentLine.match(
-                            new RegExp(`\\s*${topLevelElement.postkeyword}\\s+`)
-                        );
-                        if (postkeywordMatch) {
                             item.postkeyword = topLevelElement.postkeyword;
-                            item.post = currentLine
-                                .substring(
-                                    postkeywordMatch.index +
-                                    postkeywordMatch[0].length
-                                )
-                                .trim();
+                            if (postkeywordMatch) {
+                                item.post = currentLine
+                                    .substring(
+                                        postkeywordMatch.index +
+                                            postkeywordMatch[0].length
+                                    )
+                                    .trim();
+                            }
                         }
-
+    
                         item.type = topLevelElement.name;
                         item.name = name.trim();
                         item.annotation = annotation.trim();
                         item.generic = generic.trim();
                         item.arguments = arguments.trim();
-
+    
                         item.comment = commentBuffer.join("\n");
                         commentBuffer = [];
-
+    
                         results.push(item);
                         matched = true;
-
+    
                         // Move to next line
                         if (currentLineEndIndex === -1) {
                             // End of input
@@ -432,132 +410,53 @@ async function parseAllEntitiesFiles(files) {
                         // We should now find the name from the current line
                         const nameMatch = currentLine.match(
                             new RegExp(
-                                `\\s*${topLevelElement.keyword}\\s+([a-zA-Z0-9_\\-#\\. ]+)(?:[\\[\\(<{])?\\s*:\\s*`
+                                `\\s*${topLevelElement.keyword}\\s*([a-zA-Z0-9_\\-#\\. /:]+)(?:[\\[\\(<{])?\\s*:\\s*`
                             )
                         );
                         const name = nameMatch ? nameMatch[1] : null;
-
+    
                         // Now we should find the type declaration
                         const typeMatch = currentLine.match(
                             /\s*:\s*([\w]+)(?:\s+)?/
                         );
                         const type = typeMatch ? typeMatch[1] : null;
-
-                        // Now let's see if the block has annotations
-                        // We need to check between currentIndex and blockStartIndex, whether there's a '[' character
-                        // If there is, we should extract the annotation
-                        let annotation = "";
-                        let nextSquareBracketIndex = inputText.indexOf(
-                            "[",
-                            currentIndex
-                        );
-                        let nextLessThanIndex = inputText.indexOf(
-                            "<",
-                            currentIndex
-                        );
-                        let nextOpenParenthesisIndex = inputText.indexOf(
-                            "(",
-                            currentIndex
-                        );
-                        if (
-                            nextSquareBracketIndex !== -1 &&
-                            (nextSquareBracketIndex < currentLineEndIndex ||
-                                currentLineEndIndex === -1) &&
-                            (nextSquareBracketIndex < nextLessThanIndex ||
-                                nextLessThanIndex === -1) &&
-                            (nextSquareBracketIndex < nextOpenParenthesisIndex ||
-                                nextOpenParenthesisIndex === -1)
-                        ) {
-                            const annotationContent = extractWithinBrackets(
+    
+                        let { annotation, generic, arguments } =
+                            extractExpressionDetails(
                                 inputText,
-                                nextSquareBracketIndex,
-                                "[",
-                                "]"
+                                currentIndex,
+                                currentLineEndIndex
                             );
-                            annotation = annotationContent.content;
-
-                            if (annotation.includes("<")) {
-                                nextLessThanIndex = inputText.indexOf(
-                                    "<",
-                                    annotationContent.endIndex
-                                );
-                            }
-                            if (annotation.includes("(")) {
-                                nextOpenParenthesisIndex = inputText.indexOf(
-                                    "(",
-                                    annotationContent.endIndex
-                                );
-                            }
-                        }
-
-                        // Extract generics
-                        let generic = "";
-                        if (
-                            nextLessThanIndex !== -1 &&
-                            (nextLessThanIndex < currentLineEndIndex ||
-                                currentLineEndIndex === -1) &&
-                            (nextLessThanIndex < nextOpenParenthesisIndex ||
-                                nextOpenParenthesisIndex === -1)
-                        ) {
-                            const genericContent = extractWithinBrackets(
-                                inputText,
-                                nextLessThanIndex,
-                                "<",
-                                ">"
+    
+                        if (topLevelElement.poskeyword) {
+                            // See if it has a postkeyword
+                            const postkeywordMatch = currentLine.match(
+                                new RegExp(`\\s*${topLevelElement.postkeyword}\\s+`)
                             );
-                            generic = genericContent.content;
-
-                            if (generic.includes("(")) {
-                                nextOpenParenthesisIndex = inputText.indexOf(
-                                    "(",
-                                    genericContent.endIndex
-                                );
-                            }
-                        }
-
-                        // Extract arguments
-                        let arguments = "";
-                        if (
-                            nextOpenParenthesisIndex !== -1 &&
-                            (nextOpenParenthesisIndex < currentLineEndIndex ||
-                                currentLineEndIndex === -1)
-                        ) {
-                            const argumentsContent = extractWithinBrackets(
-                                inputText,
-                                nextOpenParenthesisIndex,
-                                "(",
-                                ")"
-                            );
-                            arguments = argumentsContent.content;
-                        }
-
-                        // See if it has a postkeyword
-                        const postkeywordMatch = currentLine.match(
-                            new RegExp(`\\s*${topLevelElement.postkeyword}\\s+`)
-                        );
-                        if (postkeywordMatch) {
                             item.postkeyword = topLevelElement.postkeyword;
-                            item.post = currentLine
-                                .substring(
-                                    postkeywordMatch.index +
-                                    postkeywordMatch[0].length
-                                )
-                                .trim();
+                            if (postkeywordMatch) {
+                                item.post = currentLine
+                                    .substring(
+                                        postkeywordMatch.index +
+                                            postkeywordMatch[0].length
+                                    )
+                                    .trim();
+                            }
                         }
-
+    
                         item.type = topLevelElement.name;
                         item.name = name.trim();
                         item.declaredtype = type.trim();
                         item.annotation = annotation.trim();
                         item.generic = generic.trim();
                         item.arguments = arguments.trim();
-
+    
                         item.comment = commentBuffer.join("\n");
                         commentBuffer = [];
-
+    
                         results.push(item);
                         matched = true;
-
+    
                         // Move to next line
                         if (currentLineEndIndex === -1) {
                             // End of input
@@ -567,13 +466,13 @@ async function parseAllEntitiesFiles(files) {
                         }
                     } else {
                         item.type = topLevelElement.name;
-
+    
                         item.comment = commentBuffer.join("\n");
                         commentBuffer = [];
-
+    
                         results.push(item);
                         matched = true;
-
+    
                         // Move to next line
                         if (currentLineEndIndex === -1) {
                             // End of input
@@ -584,7 +483,7 @@ async function parseAllEntitiesFiles(files) {
                     }
                 }
             }
-
+    
             if (!matched) {
                 // Move to next line
                 if (currentLineEndIndex === -1) {
@@ -594,13 +493,13 @@ async function parseAllEntitiesFiles(files) {
                     currentIndex = currentLineEndIndex + 1;
                 }
             }
-
+    
             if (currentIndex === -1) {
                 // End of input
                 break;
             }
         }
-
+    
         return results;
     }
 
