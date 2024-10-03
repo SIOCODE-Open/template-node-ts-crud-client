@@ -41,3 +41,5 @@ out/
 # Git ignore for NPM
 
 node_modules/
+lib/
+types/
