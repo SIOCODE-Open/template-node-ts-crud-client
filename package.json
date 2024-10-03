@@ -1,5 +1,5 @@
 {
-    "name": "@example/backend-client-node",
+    "name": "@example/client",
     "version": "0.0.1",
     "private": true,
     "description": "_You can edit this description in [`.projor/project.pglobal.yaml`](.projor/project.pglobal.yaml)_",

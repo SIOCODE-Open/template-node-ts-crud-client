@@ -1,3 +1,8 @@
+const FLAGS = {
+    assumeUserAccountEntity: false,
+};
+
+
 async function parseAllEntitiesFiles(files) {
 
     const TOP_LEVEL_ELEMENTS = [
@@ -24,13 +29,13 @@ async function parseAllEntitiesFiles(files) {
             ],
         },
     ];
-    
+
     // Helper functions
     function extractWithinBrackets(text, startIndex, openChar, closeChar) {
         let content = "";
         let bracketCount = 0;
         let foundStart = false;
-    
+
         for (let i = startIndex; i < text.length; i++) {
             let char = text[i];
             if (!foundStart) {
@@ -52,7 +57,7 @@ async function parseAllEntitiesFiles(files) {
         }
         return null; // No matching closing bracket found
     }
-    
+
     function parse(inputText, topLevelElements = TOP_LEVEL_ELEMENTS) {
         // There are 4 fundamental structures to parse:
         // type: block
@@ -91,7 +96,7 @@ async function parseAllEntitiesFiles(files) {
         //   POSTKEYWORD is always a single word, or some words. The list of valid keywords is known and fixed.
         //   POST is any text, up to the end of the line.
         // Comments: Line comments are supported. Any line beginning with '//' is considered a comment. The element starting after one or more comments receives the comment, so it is available for parsing.
-    
+
         // The parser works like this:
         //   We have a comment buffer, which is [] by default.
         //   We have a context (stack), which is created from the top-level elements by default
@@ -153,11 +158,11 @@ async function parseAllEntitiesFiles(files) {
         //     We ignore the line
         //   In case of unknown lines ...
         //     We ignore the line
-    
+
         let currentIndex = 0;
         let commentBuffer = [];
         let results = [];
-    
+
         while (currentIndex < inputText.length) {
             const currentLineEndIndex = inputText.indexOf("\n", currentIndex);
             if (currentIndex === currentLineEndIndex) {
@@ -174,7 +179,7 @@ async function parseAllEntitiesFiles(files) {
                         : currentLineEndIndex
                 )
                 .trim();
-    
+
             // Check for comments
             if (currentLine.startsWith("//")) {
                 commentBuffer.push(currentLine.substring(2).trim());
@@ -182,12 +187,12 @@ async function parseAllEntitiesFiles(files) {
                 currentIndex = currentLineEndIndex + 1;
                 continue;
             }
-    
+
             const item = { type: "Unknown" };
-    
+
             // Try to match a top level element
             let matched = false;
-    
+
             for (let topLevelElement of topLevelElements) {
                 const isThisElement = new RegExp(
                     `^\\s*${topLevelElement.keyword}\\s+`
@@ -210,7 +215,7 @@ async function parseAllEntitiesFiles(files) {
                             "{",
                             "}"
                         );
-    
+
                         // We should now find the name from the current line
                         const nameMatch = currentLine.match(
                             new RegExp(
@@ -218,7 +223,7 @@ async function parseAllEntitiesFiles(files) {
                             )
                         );
                         const name = nameMatch ? nameMatch[1] : null;
-    
+
                         // Now let's see if the block has annotations
                         // We need to check between currentIndex and blockStartIndex, whether there's a '[' character
                         // If there is, we should extract the annotation
@@ -239,7 +244,7 @@ async function parseAllEntitiesFiles(files) {
                             );
                             annotation = annotationContent.content;
                         }
-    
+
                         // Extract generics
                         let generic = "";
                         const nextLessThanIndex = inputText.indexOf(
@@ -258,7 +263,7 @@ async function parseAllEntitiesFiles(files) {
                             );
                             generic = genericContent.content;
                         }
-    
+
                         // Extract arguments
                         let arguments = "";
                         const nextOpenParenthesisIndex = inputText.indexOf(
@@ -277,27 +282,27 @@ async function parseAllEntitiesFiles(files) {
                             );
                             arguments = argumentsContent.content;
                         }
-    
+
                         // Now we parse the content
                         const parsedBlockContent = parse(
                             blockContent.content,
                             topLevelElement.content || []
                         );
-    
+
                         item.type = topLevelElement.name;
                         item.name = name.trim();
                         item.annotation = annotation.trim();
                         item.generic = generic.trim();
                         item.arguments = arguments.trim();
                         item.content = parsedBlockContent;
-    
+
                         item.comment = commentBuffer.join("\n");
                         commentBuffer = [];
-    
+
                         // Add item to results
                         results.push(item);
                         matched = true;
-    
+
                         // Now we move to the line after the block
                         currentIndex = blockContent.endIndex + 1;
                     } else if (topLevelElement.type === "property") {
@@ -305,13 +310,13 @@ async function parseAllEntitiesFiles(files) {
                         item.value = currentLine
                             .substring(topLevelElement.keyword.length)
                             .trim();
-    
+
                         item.comment = commentBuffer.join("\n");
                         commentBuffer = [];
-    
+
                         results.push(item);
                         matched = true;
-    
+
                         // Move to next line
                         if (currentLineEndIndex === -1) {
                             // End of input
@@ -327,7 +332,7 @@ async function parseAllEntitiesFiles(files) {
                             )
                         );
                         const name = nameMatch ? nameMatch[1] : null;
-    
+
                         // Now let's see if the declaration has annotations in the current line
                         // We need to check between currentIndex and currentLineEndIndex, whether there's a '[' character
                         // If there is, we should extract the annotation
@@ -349,7 +354,7 @@ async function parseAllEntitiesFiles(files) {
                             );
                             annotation = annotationContent.content;
                         }
-    
+
                         // Extract generics
                         let generic = "";
                         const nextLessThanIndex = inputText.indexOf(
@@ -369,7 +374,7 @@ async function parseAllEntitiesFiles(files) {
                             );
                             generic = genericContent.content;
                         }
-    
+
                         // Extract arguments
                         let arguments = "";
                         const nextOpenParenthesisIndex = inputText.indexOf(
@@ -389,7 +394,7 @@ async function parseAllEntitiesFiles(files) {
                             );
                             arguments = argumentsContent.content;
                         }
-    
+
                         // See if it has a postkeyword
                         const postkeywordMatch = currentLine.match(
                             new RegExp(`\\s*${topLevelElement.postkeyword}\\s+`)
@@ -399,23 +404,23 @@ async function parseAllEntitiesFiles(files) {
                             item.post = currentLine
                                 .substring(
                                     postkeywordMatch.index +
-                                        postkeywordMatch[0].length
+                                    postkeywordMatch[0].length
                                 )
                                 .trim();
                         }
-    
+
                         item.type = topLevelElement.name;
                         item.name = name.trim();
                         item.annotation = annotation.trim();
                         item.generic = generic.trim();
                         item.arguments = arguments.trim();
-    
+
                         item.comment = commentBuffer.join("\n");
                         commentBuffer = [];
-    
+
                         results.push(item);
                         matched = true;
-    
+
                         // Move to next line
                         if (currentLineEndIndex === -1) {
                             // End of input
@@ -431,25 +436,37 @@ async function parseAllEntitiesFiles(files) {
                             )
                         );
                         const name = nameMatch ? nameMatch[1] : null;
-    
+
                         // Now we should find the type declaration
                         const typeMatch = currentLine.match(
                             /\s*:\s*([\w]+)(?:\s+)?/
                         );
                         const type = typeMatch ? typeMatch[1] : null;
-    
+
                         // Now let's see if the block has annotations
                         // We need to check between currentIndex and blockStartIndex, whether there's a '[' character
                         // If there is, we should extract the annotation
                         let annotation = "";
-                        const nextSquareBracketIndex = inputText.indexOf(
+                        let nextSquareBracketIndex = inputText.indexOf(
                             "[",
+                            currentIndex
+                        );
+                        let nextLessThanIndex = inputText.indexOf(
+                            "<",
+                            currentIndex
+                        );
+                        let nextOpenParenthesisIndex = inputText.indexOf(
+                            "(",
                             currentIndex
                         );
                         if (
                             nextSquareBracketIndex !== -1 &&
                             (nextSquareBracketIndex < currentLineEndIndex ||
-                                currentLineEndIndex === -1)
+                                currentLineEndIndex === -1) &&
+                            (nextSquareBracketIndex < nextLessThanIndex ||
+                                nextLessThanIndex === -1) &&
+                            (nextSquareBracketIndex < nextOpenParenthesisIndex ||
+                                nextOpenParenthesisIndex === -1)
                         ) {
                             const annotationContent = extractWithinBrackets(
                                 inputText,
@@ -458,18 +475,29 @@ async function parseAllEntitiesFiles(files) {
                                 "]"
                             );
                             annotation = annotationContent.content;
+
+                            if (annotation.includes("<")) {
+                                nextLessThanIndex = inputText.indexOf(
+                                    "<",
+                                    annotationContent.endIndex
+                                );
+                            }
+                            if (annotation.includes("(")) {
+                                nextOpenParenthesisIndex = inputText.indexOf(
+                                    "(",
+                                    annotationContent.endIndex
+                                );
+                            }
                         }
-    
+
                         // Extract generics
                         let generic = "";
-                        const nextLessThanIndex = inputText.indexOf(
-                            "<",
-                            currentIndex
-                        );
                         if (
                             nextLessThanIndex !== -1 &&
                             (nextLessThanIndex < currentLineEndIndex ||
-                                currentLineEndIndex === -1)
+                                currentLineEndIndex === -1) &&
+                            (nextLessThanIndex < nextOpenParenthesisIndex ||
+                                nextOpenParenthesisIndex === -1)
                         ) {
                             const genericContent = extractWithinBrackets(
                                 inputText,
@@ -478,14 +506,17 @@ async function parseAllEntitiesFiles(files) {
                                 ">"
                             );
                             generic = genericContent.content;
+
+                            if (generic.includes("(")) {
+                                nextOpenParenthesisIndex = inputText.indexOf(
+                                    "(",
+                                    genericContent.endIndex
+                                );
+                            }
                         }
-    
+
                         // Extract arguments
                         let arguments = "";
-                        const nextOpenParenthesisIndex = inputText.indexOf(
-                            "(",
-                            currentIndex
-                        );
                         if (
                             nextOpenParenthesisIndex !== -1 &&
                             (nextOpenParenthesisIndex < currentLineEndIndex ||
@@ -499,7 +530,7 @@ async function parseAllEntitiesFiles(files) {
                             );
                             arguments = argumentsContent.content;
                         }
-    
+
                         // See if it has a postkeyword
                         const postkeywordMatch = currentLine.match(
                             new RegExp(`\\s*${topLevelElement.postkeyword}\\s+`)
@@ -509,24 +540,24 @@ async function parseAllEntitiesFiles(files) {
                             item.post = currentLine
                                 .substring(
                                     postkeywordMatch.index +
-                                        postkeywordMatch[0].length
+                                    postkeywordMatch[0].length
                                 )
                                 .trim();
                         }
-    
+
                         item.type = topLevelElement.name;
                         item.name = name.trim();
                         item.declaredtype = type.trim();
                         item.annotation = annotation.trim();
                         item.generic = generic.trim();
                         item.arguments = arguments.trim();
-    
+
                         item.comment = commentBuffer.join("\n");
                         commentBuffer = [];
-    
+
                         results.push(item);
                         matched = true;
-    
+
                         // Move to next line
                         if (currentLineEndIndex === -1) {
                             // End of input
@@ -536,13 +567,13 @@ async function parseAllEntitiesFiles(files) {
                         }
                     } else {
                         item.type = topLevelElement.name;
-    
+
                         item.comment = commentBuffer.join("\n");
                         commentBuffer = [];
-    
+
                         results.push(item);
                         matched = true;
-    
+
                         // Move to next line
                         if (currentLineEndIndex === -1) {
                             // End of input
@@ -553,7 +584,7 @@ async function parseAllEntitiesFiles(files) {
                     }
                 }
             }
-    
+
             if (!matched) {
                 // Move to next line
                 if (currentLineEndIndex === -1) {
@@ -563,15 +594,15 @@ async function parseAllEntitiesFiles(files) {
                     currentIndex = currentLineEndIndex + 1;
                 }
             }
-    
+
             if (currentIndex === -1) {
                 // End of input
                 break;
             }
         }
-    
+
         return results;
-    }    
+    }
 
     // Assume the parser function is already here
 
@@ -593,16 +624,64 @@ async function parseAllEntitiesFiles(files) {
                 description: comment || "No description.",
                 attributes: [],
                 associations: [],
-                reverseAssociations: [],
+                reverseAssociations: []
             };
 
             content.forEach((contentItem) => {
                 if (contentItem.type === "attribute") {
-                    baseObject.attributes.push({
+                    const newAttr = {
                         name: contentItem.name,
                         type: `basic#${contentItem.declaredtype}`,
                         description: contentItem.comment || "No description.",
-                    });
+                        validation: {
+                            name: '_',
+                            description: ''
+                        }
+                    };
+
+                    if (contentItem.arguments) {
+                        let remaining = contentItem.arguments || '';
+                        // Parse and remove regex first
+                        const matchesRe = /(?:matches)\s+(\/(?:(?:[^/\\])+(?:\\\/|\\)?)+\/)/g;
+                        const matchesMatch = matchesRe.exec(remaining);
+                        if (matchesMatch) {
+                            newAttr.validation.matchesRegex = matchesMatch[1]
+                                .substring(1, matchesMatch[1].length - 1);
+                            const indexOf = remaining.indexOf(matchesMatch[0]);
+                            remaining = remaining.substring(0, indexOf) + remaining.substring(indexOf + matchesMatch[0].length);
+                        }
+                        // // Find all gt, ge, lt, ge
+                        const compRe = /([<>]=?)\s+([-]?[\s0-9]+)/;
+                        let compMatches = compRe.exec(remaining);
+                        while (compMatches) {
+                            if (compMatches[1] === '>') {
+                                newAttr.validation.isGreaterThan = parseInt(compMatches[2]);
+                            } else if (compMatches[1] === '>=') {
+                                newAttr.validation.isGreaterThanOrEquals = parseInt(compMatches[2]);
+                            } else if (compMatches[1] === '<') {
+                                newAttr.validation.isLessThan = parseInt(compMatches[2]);
+                            } else if (compMatches[1] === '<=') {
+                                newAttr.validation.isLessThanOrEquals = parseInt(compMatches[2]);
+                            }
+
+                            const indexOf = remaining.indexOf(compMatches[0]);
+                            remaining = remaining.substring(0, indexOf) + remaining.substring(indexOf + compMatches[0].length);
+                            compMatches = compRe.exec(remaining);
+                        }
+
+                        if (remaining.includes("not null")) {
+                            newAttr.validation.isNotNull = true;
+                        }
+                        if (remaining.includes("not empty")) {
+                            newAttr.validation.isNotEmpty = true;
+                        }
+                        if (remaining.includes("unique")) {
+                            newAttr.validation.isUnique = true;
+                        }
+
+                    }
+
+                    baseObject.attributes.push(newAttr);
                 } else if (contentItem.type === "association") {
                     baseObject.associations.push({
                         name: contentItem.name,
@@ -628,20 +707,65 @@ async function parseAllEntitiesFiles(files) {
         return { id: 'entities', name: 'Entities', schema: 'Entity', objects: objects.filter((object) => object !== null) };
     }
 
-    if (files.length !== 1) {
+    if (files.length < 1) {
         return {
             errors: [
                 {
                     filename: "<unknown>",
-                    message: "Only one entities file is allowed",
+                    message: "At least one file is required.",
                 },
             ],
         };
     }
 
-    // Parse using the existing parser function
-    const parsedData = parse(files[0].content);
-    return processParsedData(parsedData);
+    const parsedDataList = files.map((file) => parse(file.content));
+    const processedDataList = parsedDataList.map(processParsedData);
+    const mergedData = processedDataList.reduce((acc, curr) => {
+        acc.objects.push(...curr.objects);
+        return acc;
+    }, { id: 'entities', name: 'Entities', schema: 'Entity', objects: [] });
+
+    if (FLAGS.assumeUserAccountEntity) {
+        mergedData.objects.push(
+            {
+                name: "UserAccount",
+                description: "A registered user of the system",
+                masked: true,
+                attributes: [
+                    {
+                        name: "login_name",
+                        description: "The login name of the user",
+                        type: "basic#String",
+                        validation: {
+                            name: '_', description: '',
+                            isNotEmpty: true, isUnique: true
+                        }
+                    },
+                    {
+                        name: "password_hash",
+                        description: "The hashed password of the user (BCrypt)",
+                        type: "basic#String",
+                        masked: true,
+                        validation: {
+                            name: '_', description: '',
+                            isNotEmpty: true
+                        }
+                    },
+                    {
+                        name: "display_name",
+                        description: "The display name of the user",
+                        type: "basic#String",
+                        validation: {
+                            name: '_', description: '',
+                            isNotEmpty: true
+                        }
+                    },
+                ]
+            }
+        );
+    }
+
+    return mergedData;
 }
 
 return {

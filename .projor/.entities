@@ -7,8 +7,15 @@ entity OrganizationUnit {
 
 // An employee
 entity Employee {
-    col first_name: String
-    col last_name: String
+    col first_name: String (not empty)
+    col last_name: String (not empty)
     // Org unit of employee
     join org_unit: OrganizationUnit
+    col birth_date: LocalDate (not null)
+    col last_seen_at: Instant
+}
+
+entity Shift {
+    col begins_at: LocalTime (not null)
+    col ends_at: LocalTime (not null)
 }

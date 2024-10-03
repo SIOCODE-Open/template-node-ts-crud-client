@@ -10,3 +10,8 @@ fields:
   - name: masked
     description: Whether the attribute is masked
     type: boolean
+  - name: validation
+    description: Optional validation for the attribute
+    type: attachment
+    references: AttributeValidation
+    required: false

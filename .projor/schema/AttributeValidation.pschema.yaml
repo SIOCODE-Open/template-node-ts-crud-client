@@ -1,0 +1,28 @@
+id: AttributeValidation
+name: Attribute Validation
+description: Validation options of an attribute
+fields:
+  - name: isNotNull
+    description: The attribute must not be null
+    type: boolean
+  - name: isUnique
+    description: The attribute must be unique
+    type: boolean
+  - name: isNotEmpty
+    description: The attribute must not be empty
+    type: boolean
+  - name: isGreaterThan
+    description: The attribute must be greater than a value
+    type: integer
+  - name: isGreaterThanOrEquals
+    description: The attribute must be greater than or equal to a value
+    type: integer
+  - name: isLessThan
+    description: The attribute must be less than a value
+    type: integer
+  - name: isLessThanOrEquals
+    description: The attribute must be less than or equal to a value
+    type: integer
+  - name: matchesRegex
+    description: The attribute must match a regular expression
+    type: string

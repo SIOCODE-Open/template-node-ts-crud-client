@@ -1,4 +1,4 @@
-# Backend Client Node
+# Client
 
 This is a [ProJor](https://projor.io) template, that generates a _TypeScript Node.JS Client Library_ for a _CRUD API_. See the [`.entities`](.projor/.entities) file on how to define the supported resources.
 

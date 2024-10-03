@@ -6,12 +6,44 @@ fields:
     description: The Java type of the basic type
     type: string
     required: true
-  - name: jsonExample
-    description: An example of the basic type in JSON
+  - name: ts
+    description: The TypeScript type of the basic type
+    type: string
+    required: true
+  - name: go
+    description: The Go type of the basic type
+    type: string
+    required: true
+  - name: csharp
+    description: The C# type of the basic type
+    type: string
+    required: true
+  - name: sql
+    description: The SQL type of the basic type
     type: string
     required: true
   - name: jsDocType
     description: The JSDoc type of the basic type
+    type: string
+    required: true
+  - name: jsonExample
+    description: An example of the basic type in JSON (also used in TypeScript / JavaScript)
+    type: string
+    required: true
+  - name: javaExample
+    description: An example of the basic type in Java
+    type: string
+    required: true
+  - name: goExample
+    description: An example of the basic type in Go
+    type: string
+    required: true
+  - name: csharpExample
+    description: An example of the basic type in C#
+    type: string
+    required: true
+  - name: sqlExample
+    description: An example of the basic type in SQL
     type: string
     required: true
   - name: attributeFilters
@@ -19,7 +51,3 @@ fields:
     multiple: true
     references: AttributeFilter
     description: The filters that can be applied to this type
-  - name: ts
-    description: The TypeScript type of the basic type
-    type: string
-    required: true

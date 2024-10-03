@@ -17,3 +17,7 @@ fields:
     type: attachment
     references: ReverseAssociation
     multiple: true
+  - name: masked
+    description: Whether the entire entity is masked, and only for internal purposes
+    type: boolean
+

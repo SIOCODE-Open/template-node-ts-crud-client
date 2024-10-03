@@ -1,5 +1,55 @@
-scope: example
-name: backend-client-node
-apiName: backend
-version: 0.0.1
+# ProJor Template Project Configuration
+# You should use the same values across all projects sharing the CRUD MK2 model
+
 description: _You can edit this description in [`.projor/project.pglobal.yaml`](.projor/project.pglobal.yaml)_
+version: 0.0.1
+
+# Backend project configuration
+backend:
+  group: com.example
+  scope: example
+  name: backend
+  redis:
+    enabled: true
+  apiDocs:
+    enabled: true
+  apiUrl: http://localhost:8080/backend/v1
+
+# Client project configuration
+client:
+  scope: example
+  group: com.example
+  name: client
+
+# Admin frontend project configuration
+admin:
+  scope: example
+  group: com.example
+  name: admin
+
+# Common configuration
+
+# API Style can be one of: default, jsonapi, rest-hapi, http-jsonrpc
+#     default - Our own conventions are applied, when generating the API
+#     jsonapi - A JSON:API compliant API is generated
+#     rest-hapi - A REST-hapi compliant API is generated
+#     http-jsonrpc - A jsonrpc 2.0 compliant API is generated, served via a HTTP POST endpoint
+apiStyle: default
+
+# Authentication Style can be one of: none, jwt, login
+#     none - No authentication is applied, a default '<none>' user identity is used.
+#     jwt - JWT tokens are used for authentication. Allows all authenticated users access to all endpoints.
+#     login - The server issues tokens after a successful login. Allows all authenticated users access to all endpoints.
+authStyle: login
+
+# Data Scope can be one of: global, user, organization
+#     global - Any user can access any data
+#     user - Users can only access their own data
+dataScope: global
+
+# CRUD config, which operations are enabled
+crud:
+  create: true
+  read: true
+  update: true
+  delete: true

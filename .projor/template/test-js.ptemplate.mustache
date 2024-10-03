@@ -13,7 +13,7 @@ function randomString(length = 10) {
     return Math.random().toString(36).substring(2, 2 + length);
 }
 
-function randomInteger(min = 0, max = 1000) {
+function randomInteger(min = 0, max = 100000) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
@@ -29,65 +29,78 @@ function randomDouble(min = 0, max = 1000) {
     return Math.random() * (max - min) + min;
 }
 
-describe(
-    '{{capitalCase $.name}} Tests', () => {
+function randomLocalTime() {
+    let randomHour = randomInteger(0, 23);
+    let randomMinute = randomInteger(0, 59);
+    let randomSecond = randomInteger(0, 59);
+    return `${randomHour < 10 ? '0' : ''}${randomHour}:${randomMinute < 10 ? '0' : ''}${randomMinute}:${randomSecond < 10 ? '0' : ''}${randomSecond}`;
+}
 
-        const backendUrl = process.env.{{constantCase $.name}}_TEST_BACKEND_URL || 'http://localhost:8080/{{kebabCase $.apiName}}/v1';
-        const authLoginName = process.env.{{constantCase $.name}}_TEST_AUTH_LOGIN_NAME || 'admin';
-        const authLoginPassword = process.env.{{constantCase $.name}}_TEST_AUTH_LOGIN_PASSWORD || 'admin';
-        const authJwtToken = process.env.{{constantCase $.name}}_TEST_AUTH_JWT_TOKEN || null;
+function randomLocalDate() {
+    const oneYearMs = 1000 * 60 * 60 * 24 * 365;
+    const randomMs = 2 * Math.floor(Math.random() * oneYearMs) - oneYearMs;
+    const randomDate = new Date(Date.now() + randomMs);
+    return randomDate.toISOString().split('T')[0];
+}
+
+function randomInstant() {
+    return `${randomLocalDate()}T${randomLocalTime()}Z`;
+}
+
+describe(
+    '{{capitalCase $.client.name}} Tests', () => {
+
+        const backendUrl = process.env.{{constantCase $.client.name}}_TEST_BACKEND_URL || `{{$.backend.apiUrl}}`;
+        const authLoginName = process.env.{{constantCase $.client.name}}_TEST_AUTH_LOGIN_NAME || 'admin';
+        const authLoginPassword = process.env.{{constantCase $.client.name}}_TEST_AUTH_LOGIN_PASSWORD || 'admin';
+        const authJwtToken = process.env.{{constantCase $.client.name}}_TEST_AUTH_JWT_TOKEN || null;
         
         {{#each entities}}
         describe(
-            '{{capitalCase name}} Service Tests (/{{kebabCase ../$.apiName}}/v1/{{kebabCase name}})',
+            '{{capitalCase name}} Service Tests ({{../$.backend.apiUrl}}/{{kebabCase name}})',
             () => {
 
-                var authToken = null;
+                var clientOpts = null;
 
-                const doLogin = async () => {
+                const prepareClientOpts = async () => {
 
-                    if(authJwtToken) {
-                        authToken = authJwtToken;
-                        console.log('Using JWT token from configuration for authentication, skipping login ...');
-                        return authToken;
+                    if (clientOpts) {
+                        return;
                     }
 
-                    try {
-                        const loginResponse = await fetch(
-                            `${backendUrl}/auth/login`,
-                            {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json'
-                                },
-                                body: JSON.stringify({
-                                    loginName: authLoginName,
-                                    password: authLoginPassword
-                                })
-                            }
-                        );
-                        if (!loginResponse.ok) {
-                            throw new Error("Cannot run tests: login endpoint returned status " + loginResponse.status + " " + loginResponse.statusText);
-                        }
-                        // Token is raw the body
-                        authToken = await loginResponse.text();
-                        return authToken;
-                    } catch (error) {
-                        const isConnRefused = error.message.includes('ECONNREFUSED');
-                        if (isConnRefused) {
-                            throw new Error([error], "Cannot run tests: connection refused. Is the backend running?");
-                        }
-                        throw new AggregateError([error], "Cannot run tests: login failed with error " + error.message);
+                    {{#if (equals ../$.authStyle "none")}}
+                    clientOpts = {
+                        baseUrl: backendUrl,
+                        headers: {}
+                    };
+                    {{/if}}
+
+                    {{#if (equals ../$.authStyle "jwt")}}
+                    if (!authJwtToken) {
+                        throw new Error("Cannot run tests: missing JWT token in test configuration ({{constantCase ../$.client.name}}_TEST_AUTH_JWT_TOKEN variable)");
                     }
+                    clientOpts = {
+                        baseUrl: backendUrl,
+                        headers: {
+                            Authorization: `Bearer ${authJwtToken}`
+                        }
+                    };
+                    {{/if}}
+
+                    {{#if (equals ../$.authStyle "login")}}
+                    if (!authLoginName || !authLoginPassword) {
+                        throw new Error("Cannot run tests: missing login credentials in test configuration ({{constantCase ../$.client.name}}_TEST_AUTH_LOGIN_NAME and {{constantCase ../$.client.name}}_TEST_AUTH_LOGIN_PASSWORD variables)");
+                    }
+                    const authSvc = client.create{{pascalCase ../$.backend.name}}AuthService(backendUrl);
+                    const { clientOptions } = await authSvc.login(authLoginName, authLoginPassword);
+                    clientOpts = clientOptions;
+                    {{/if}}
+
                 }
 
                 const createService = async () => {
-                    const token = await doLogin();
-                    return client.create{{pascalCase name}}Service(backendUrl, {
-                        Authorization: `Bearer ${token}`,
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    });
+                    await prepareClientOpts();
+                    return client.create{{pascalCase name}}Service(clientOpts);
                 };
 
                 it(
@@ -174,9 +187,7 @@ describe(
                         const associations = {};
                         {{#each associations}}
                         // Assuming the associated entity is {{pascalCase type.name}}
-                        const related{{pascalCase name}}Service = await client.create{{pascalCase type.name}}Service(backendUrl, {
-                            Authorization: `Bearer ${authToken}`
-                        });
+                        const related{{pascalCase name}}Service = await client.create{{pascalCase type.name}}Service(clientOpts);
                         const related{{pascalCase name}} = await related{{pascalCase name}}Service.create({
                             {{#each type.attributes}}
                             {{camelCase name}}: random{{pascalCase type.name}}(),
@@ -233,6 +244,8 @@ describe(
 
                 // New test: Clear an attribute
                 {{#each attributes}}
+                {{#unless validation.isNotNull}}
+                {{#unless validation.isNotEmpty}}
                 it(
                     "DELETE /:id/{{camelCase name}} - clear attribute {{camelCase name}}",
                     async () => {
@@ -255,6 +268,8 @@ describe(
                         expect(updated{{pascalCase ../name}}).to.have.property('{{camelCase name}}').that.is.null;
                     }
                 );
+                {{/unless}}
+                {{/unless}}
                 {{/each}}
 
                 // New test: Update an association with null and non-null values
@@ -264,9 +279,7 @@ describe(
                     async () => {
                         const service = await createService();
                         // Create related entity
-                        const related{{pascalCase name}}Service = await client.create{{pascalCase type.name}}Service(backendUrl, {
-                            Authorization: `Bearer ${authToken}`
-                        });
+                        const related{{pascalCase name}}Service = await client.create{{pascalCase type.name}}Service(clientOpts);
                         const related{{pascalCase name}} = await related{{pascalCase name}}Service.create({
                             {{#each type.attributes}}
                             {{camelCase name}}: random{{pascalCase type.name}}(),
@@ -294,9 +307,7 @@ describe(
                     async () => {
                         const service = await createService();
                         // Create related entity
-                        const related{{pascalCase name}}Service = await client.create{{pascalCase type.name}}Service(backendUrl, {
-                            Authorization: `Bearer ${authToken}`
-                        });
+                        const related{{pascalCase name}}Service = await client.create{{pascalCase type.name}}Service(clientOpts);
                         const related{{pascalCase name}} = await related{{pascalCase name}}Service.create({
                             {{#each type.attributes}}
                             {{camelCase name}}: random{{pascalCase type.name}}(),
@@ -359,7 +370,7 @@ describe(
                         // Create a new entity with the unique value
                         const new{{pascalCase name}} = {
                             {{#each attributes}}
-                            {{camelCase name}}: {{#if @first}}uniqueValue{{else}}random{{pascalCase type.name}}(){{/if}},
+                            {{camelCase name}}: random{{pascalCase type.name}}(),
                             {{/each}}
                             {{#each associations}}
                             {{camelCase name}}Id: null,
@@ -368,13 +379,18 @@ describe(
                         const created{{pascalCase name}} = await service.create(new{{pascalCase name}});
                         // Search for the entity using the unique attribute
                         const filter = {
-                            {{#each attributes}}
-                            {{#if @first}}
-                            {{camelCase name}}: {
-                                equals: uniqueValue
-                            }
-                            {{/if}}
-                            {{/each}}
+                            and: [
+                                {
+                                    id: {
+                                        in: [created{{pascalCase name}}.id]
+                                    }
+                                },
+                                {
+                                    id: {
+                                        notIn: [uniqueValue]
+                                    }
+                                }
+                            ]
                         };
                         const results = await service.search(filter);
                         expect(results).to.be.an('array');
@@ -393,22 +409,27 @@ describe(
                         // Create a new entity with the unique value
                         const new{{pascalCase name}} = {
                             {{#each attributes}}
-                            {{camelCase name}}: {{#if @first}}uniqueValue{{else}}random{{pascalCase type.name}}(){{/if}},
+                            {{camelCase name}}: random{{pascalCase type.name}}(),
                             {{/each}}
                             {{#each associations}}
                             {{camelCase name}}Id: null,
                             {{/each}}
                         };
-                        await service.create(new{{pascalCase name}});
+                        const created{{pascalCase name}} = await service.create(new{{pascalCase name}});
                         // Count entities matching the filter
                         const filter = {
-                            {{#each attributes}}
-                            {{#if @first}}
-                            {{camelCase name}}: {
-                                equals: uniqueValue
-                            }
-                            {{/if}}
-                            {{/each}}
+                            and: [
+                                {
+                                    id: {
+                                        in: [created{{pascalCase name}}.id]
+                                    }
+                                },
+                                {
+                                    id: {
+                                        notIn: [uniqueValue]
+                                    }
+                                }
+                            ]
                         };
                         const count = await service.countFor(filter);
                         expect(count).to.be.a('number');

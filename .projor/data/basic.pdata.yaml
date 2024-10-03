@@ -6,9 +6,16 @@ objects:
   - name: String
     description: A string
     java: java.lang.String
-    jsonExample: '"string"'
-    jsDocType: string
     ts: string
+    go: string
+    csharp: string
+    sql: VARCHAR(255)
+    jsDocType: string
+    jsonExample: '"string"'
+    javaExample: '"string"'
+    goExample: '"string"'
+    csharpExample: '"string"'
+    sqlExample: "'string'"
     attributeFilters:
       - filters#equals
       - filters#notEquals
@@ -20,12 +27,20 @@ objects:
       - filters#notStartsWith
       - filters#endsWith
       - filters#notEndsWith
+
   - name: Integer
     description: An integer
     java: java.lang.Integer
-    jsonExample: "42"
-    jsDocType: number
     ts: number
+    go: int
+    csharp: int
+    sql: INT
+    jsDocType: number
+    jsonExample: "42"
+    javaExample: "42"
+    goExample: "42"
+    csharpExample: "42"
+    sqlExample: "42"
     attributeFilters:
       - filters#equals
       - filters#notEquals
@@ -35,12 +50,20 @@ objects:
       - filters#lessThanOrEquals
       - filters#in
       - filters#notIn
+
   - name: Float
     description: A floating-point number
     java: java.lang.Float
-    jsonExample: "3.14"
-    jsDocType: number
     ts: number
+    go: float32
+    csharp: float
+    sql: FLOAT
+    jsDocType: number
+    jsonExample: "3.14"
+    javaExample: "3.14f"
+    goExample: "3.14"
+    csharpExample: "3.14"
+    sqlExample: "3.14"
     attributeFilters:
       - filters#equals
       - filters#notEquals
@@ -48,12 +71,20 @@ objects:
       - filters#lessThan
       - filters#greaterThanOrEquals
       - filters#lessThanOrEquals
+
   - name: Double
     description: A double-precision floating-point number
     java: java.lang.Double
-    jsonExample: "3.14159"
-    jsDocType: number
     ts: number
+    go: float64
+    csharp: double
+    sql: DOUBLE
+    jsDocType: number
+    jsonExample: "3.14159"
+    javaExample: "3.14159"
+    goExample: "3.14159"
+    csharpExample: "3.14159"
+    sqlExample: "3.14159"
     attributeFilters:
       - filters#equals
       - filters#notEquals
@@ -61,12 +92,83 @@ objects:
       - filters#lessThan
       - filters#greaterThanOrEquals
       - filters#lessThanOrEquals
+
   - name: Boolean
     description: A boolean
     java: java.lang.Boolean
-    jsonExample: "true"
-    jsDocType: boolean
     ts: boolean
+    go: bool
+    csharp: bool
+    sql: BOOLEAN
+    jsDocType: boolean
+    jsonExample: "true"
+    javaExample: "true"
+    goExample: "true"
+    csharpExample: "true"
+    sqlExample: "true"
     attributeFilters:
       - filters#equals
       - filters#notEquals
+
+  - name: LocalDate
+    description: A date without a time
+    java: java.time.LocalDate
+    ts: string
+    go: time.Time
+    csharp: DateTime
+    sql: DATE
+    jsDocType: string
+    jsonExample: '"2020-01-01"'
+    javaExample: "LocalDate.of(2020, 1, 1)"
+    goExample: "time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)"
+    csharpExample: "new DateTime(2020, 1, 1)"
+    sqlExample: "'2020-01-01'"
+    attributeFilters:
+      - filters#equals
+      - filters#notEquals
+      - filters#greaterThan
+      - filters#lessThan
+      - filters#greaterThanOrEquals
+      - filters#lessThanOrEquals
+
+  - name: LocalTime
+    description: A time without a date
+    java: java.time.LocalTime
+    ts: string
+    go: time.Time
+    csharp: DateTime
+    sql: TIME
+    jsDocType: string
+    jsonExample: '"12:34:56"'
+    javaExample: "LocalTime.of(12, 34, 56)"
+    goExample: "time.Date(0, 0, 0, 12, 34, 56, 0, time.UTC)"
+    csharpExample: "new DateTime(0, 0, 0, 12, 34, 56)"
+    sqlExample: "'12:34:56'"
+    attributeFilters:
+      - filters#equals
+      - filters#notEquals
+      - filters#greaterThan
+      - filters#lessThan
+      - filters#greaterThanOrEquals
+      - filters#lessThanOrEquals
+
+  - name: Instant
+    description: A date and time
+    java: java.time.Instant
+    ts: string
+    go: time.Time
+    csharp: DateTime
+    sql: TIMESTAMP WITHOUT TIME ZONE
+    jsDocType: string
+    jsonExample: '"2020-01-01T12:34:56Z"'
+    javaExample: 'Instant.parse("2020-01-01T12:34:56Z")'
+    goExample: "time.Date(2020, 1, 1, 12, 34, 56, 0, time.UTC)"
+    csharpExample: 'DateTime.Parse("2020-01-01T12:34:56Z")'
+    sqlExample: "'2020-01-01 12:34:56'"
+    attributeFilters:
+      - filters#equals
+      - filters#notEquals
+      - filters#greaterThan
+      - filters#lessThan
+      - filters#greaterThanOrEquals
+      - filters#lessThanOrEquals

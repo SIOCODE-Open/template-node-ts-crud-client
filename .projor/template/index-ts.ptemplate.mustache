@@ -6,6 +6,125 @@
     "formatUsing": "typescript"
 }
 ---
+
+/** Options for the client services of {{capitalCase $.backend.name}} */
+export interface I{{pascalCase $.backend.name}}ClientOptions {
+    /**
+     * The base URL of the {{capitalCase $.backend.name}} API.
+     * Default: {{$.backend.apiUrl}}
+     */
+    baseUrl?: string;
+    /**
+     * Additional headers to include in requests to the {{capitalCase $.backend.name}} API.
+     * Default: {}
+     */
+    headers?: Record<string, string>;
+    {{#unless (equals $.authStyle "none")}}
+    /**
+     * The API key to use for requests to the {{capitalCase $.backend.name}} API. MUST be supplied!
+     */
+    apiKey: string;
+    {{/unless}}
+}
+
+/** Options for listing, such as paging and sorting */
+export interface I{{pascalCase $.backend.name}}ListingOptions<TSort extends string> {
+    /**
+     * The offset to start listing from
+     */
+    offset: number;
+
+    /**
+     * The maximum number of items to list
+     */
+    limit: number;
+
+    /**
+     * The field to sort by
+     */
+    sort?: TSort;
+}
+
+/**
+ * Helper function to create the listing query parameter string from the listing client parameters object.
+ * @param listParams The listing client parameters object
+ * @returns The query parameter string
+ */
+function _listParams<TSort extends string>(listParams?: I{{pascalCase $.backend.name}}ListingOptions<TSort>): string {
+    if (!listParams) {
+        return '';
+    }
+    const params = new URLSearchParams();
+    params.append('offset', listParams.offset.toString());
+    params.append('limit', listParams.limit.toString());
+    if (listParams.sort) {
+        params.append('sort', listParams.sort);
+    }
+    return `?${params.toString()}`;
+}
+
+/**
+ * Helper function to make a request using fetch to the {{capitalCase $.backend.name}} API.
+ * @param opts The request options
+ * @returns The response from the API
+ */
+async function _makeRequest(
+    baseUrl: string,
+    headers: Record<string, any>,
+    opts: {
+        path?: string;
+        query?: string;
+        method: string;
+        body?: any;
+        asText?: boolean;
+        noOp?: boolean;
+    }
+): Promise<any> {
+
+    let queryString = '';
+    if(typeof opts.query === 'string' && opts.query.length > 0) {
+        if(opts.query.startsWith('?')) {
+            queryString = opts.query;
+        } else {
+            queryString = `?${opts.query}`;
+        }
+    }
+
+    let response = null;
+
+    try {
+
+        response = await fetch(
+            `${baseUrl}${opts.path || ''}${queryString}`,
+            {
+                method: opts.method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    ...headers
+                },
+                body: JSON.stringify(opts.body),
+            }
+        );
+    } catch(err: any) {
+        // FIXME: Better client error handling
+        throw new Error(`Fetch failed (host probably down) ${opts.method} ${opts.path || '/'} @ ${baseUrl}: ${err}`);
+    }
+    if (!response.ok) {
+        // FIXME: Better client error handling
+        throw new Error(`Failed calling ${opts.method} ${opts.path || '/'} @ ${baseUrl}: ${response.status} ${response.statusText}`);
+    }
+    if (opts.noOp) {
+        return {ok: true};
+    }
+    if (opts.asText) {
+        return await response.text();
+    }
+    return await response.json();
+
+}
+
+
 {{#each entities}}
 /** {{{description}}} */
 export interface I{{pascalCase name}} {
@@ -20,7 +139,7 @@ export interface I{{pascalCase name}} {
 
     {{#each associations}}
     /** {{{description}}} */
-    {{camelCase name}}: string;
+    {{camelCase name}}Id: string;
 
     {{/each}}
 }
@@ -35,7 +154,7 @@ export interface INew{{pascalCase name}} {
 
     {{#each associations}}
     /** {{{description}}} */
-    {{camelCase name}}?: string | null;
+    {{camelCase name}}Id?: string | null;
 
     {{/each}}
 }
@@ -77,245 +196,405 @@ export interface I{{pascalCase name}}Filter {
     }
 }
 
-export type I{{pascalCase name}}Sort = "id__asc" | "id__desc"{{#if attributes}} | {{/if}}
+export type I{{pascalCase name}}Sort = 
+    | "id__asc" 
+    | "id__desc"
     {{#each attributes}}
-    "{{camelCase name}}__asc" | "{{camelCase name}}__desc"{{#unless @last}} | {{/unless}}
+    | "{{camelCase name}}__asc"
+    | "{{camelCase name}}__desc"
     {{/each}}
     ;
 
+
 export interface I{{pascalCase name}}Service {
+{{#if ../$.crud.read}}
+    /**
+        * List all {{capitalCase name}} objects, optionally applying paging and sorting.
+        * @param opts Options for paging and sorting
+        * @returns A list of {{capitalCase name}} objects
+        */
     listAll(
-        opts?: {
-            offset: number;
-            limit: number;
-            sort: I{{pascalCase name}}Sort;
-        }
+        opts?: I{{pascalCase ../$.backend.name}}ListingOptions<I{{pascalCase name}}Sort>
     ): Promise<Array<I{{pascalCase name}}>>;
-    getById(id: string): Promise<I{{pascalCase name}} | null>;
+
+    /**
+        * Get a {{capitalCase name}} object by its unique identifier.
+        * @param id The unique identifier of the {{capitalCase name}} object
+        * @returns The {{capitalCase name}} object. Throws an error if not found.
+        */
+    getById(id: string): Promise<I{{pascalCase name}}>;
+
+    /**
+        * Count the total number of {{capitalCase name}} objects.
+        * @returns The total number of {{capitalCase name}} objects
+        */
     countAll(): Promise<number>;
+
+    /**
+        * Search for {{capitalCase name}} objects using a filter, optionally applying paging and sorting.
+        * @param filter The filter to apply
+        * @param opts Options for paging and sorting
+        * @returns A list of filtered {{capitalCase name}} objects
+        */
     search(
         filter: I{{pascalCase name}}Filter,
-        opts?: {
-            offset: number;
-            limit: number;
-            sort: I{{pascalCase name}}Sort;
-        }
+        opts?: I{{pascalCase ../$.backend.name}}ListingOptions<I{{pascalCase name}}Sort>
     );
+
+    /**
+        * Count the total number of {{capitalCase name}} objects that match a filter.
+        * @param filter The filter to apply
+        * @returns The total number of {{capitalCase name}} objects that match the filter
+        */
     countFor(filter: I{{pascalCase name}}Filter): Promise<number>;
+
+    {{#each associations}}
+    /**
+        * Get the {{capitalCase name}} of a {{capitalCase ../name}} object by its unique identifier.
+        * @param id The unique identifier of the {{capitalCase ../name}} object
+        * @returns The {{capitalCase name}} of the given {{capitalCase ../name}} object. Throws an error if the {{capitalCase ../name}} object is not found.
+        */
+    get{{pascalCase name}}Of(id: string): Promise<I{{pascalCase type.name}} | null>;
+
+    {{/each}}
+    {{#each reverseAssociations}}
+    /**
+        * Get the {{capitalCase name}} of a {{capitalCase ../name}} object by its unique identifier.
+        * @param id The unique identifier of the {{capitalCase ../name}} object
+        * @returns The {{capitalCase name}} of the given {{capitalCase ../name}} object. Throws an error if the {{capitalCase ../name}} object is not found.
+        */
+    get{{pascalCase name}}Of(id: string): Promise<{{#if isList}}Array<{{/if}}I{{pascalCase type.name}}{{#if isList}}>{{/if}}>;
+
+    {{/each}}
+{{/if}}
+{{#if ../$.crud.create}}
+    /**
+        * Create a new {{capitalCase name}} object.
+        * @param new{{pascalCase name}} The new {{capitalCase name}} object to create
+        * @returns The newly created {{capitalCase name}} object
+        */
     create(new{{pascalCase name}}: INew{{pascalCase name}}): Promise<I{{pascalCase name}}>;
+
+{{#if ../$.crud.update}}
+    /**
+        * Create or update a list of {{capitalCase name}} objects. Each object will either be created or updated.
+        * @param newOrUpdatedEntities The list of {{capitalCase name}} objects to create or update
+        * @returns The list of newly created or updated {{capitalCase name}} objects
+        */
+    upsert(newOrUpdatedEntities: Array<I{{pascalCase name}}>): Promise<Array<I{{pascalCase name}}>>;
+
+{{/if}}
+{{/if}}
+{{#if ../$.crud.update}}
+    /**
+        * Update a {{capitalCase name}} object by its unique identifier. Requires a value for ALL FIELDS of the object. Nulls will be interpreted as clearing the field. Missing fields will be nulls.
+        * @param id The unique identifier of the {{capitalCase name}} object
+        * @param updated{{pascalCase name}} The updated {{capitalCase name}} object
+        */
+    fullUpdate(id: string, updated{{pascalCase name}}: INew{{pascalCase name}}): Promise<void>;
+
+    /**
+        * Update a {{capitalCase name}} object by its unique identifier. Requires a value for at least one field of the object. Nulls and missing fields will be ignored.
+        * @param id The unique identifier of the {{capitalCase name}} object
+        * @param updatedFields The fields to update
+        */
+    partialUpdate(id: string, updatedFields: Partial<INew{{pascalCase name}}>): Promise<void>;
+
     {{#each attributes}}
+{{#unless masked}}
+    /**
+        * Update the {{camelCase name}} field of a {{capitalCase ../name}} object by its unique identifier.
+        * @param id The unique identifier of the {{capitalCase ../name}} object
+        * @param {{camelCase name}} The new value for the {{camelCase name}} field
+        */
     update{{pascalCase name}}(id: string, {{camelCase name}}: {{{type.ts}}}): Promise<void>;
+
+{{#unless validation.isNotNull}}
+{{#unless validation.isNotEmpty}}
+    /**
+        * Clear the {{camelCase name}} field of a {{capitalCase ../name}} object by its unique identifier.
+        * @param id The unique identifier of the {{capitalCase ../name}} object
+        */
     clear{{pascalCase name}}(id: string): Promise<void>;
+
+{{/unless}}
+{{/unless}}
+{{/unless}}
     {{/each}}
     {{#each associations}}
+    /**
+        * Update the {{camelCase name}} of a {{capitalCase ../name}} object by its unique identifier.
+        * @param id The unique identifier of the {{capitalCase ../name}} object
+        * @param {{camelCase name}} The new value for the {{camelCase name}} association
+        */
     update{{pascalCase name}}(id: string, {{camelCase name}}: string): Promise<void>;
+
+    /**
+        * Clear the {{camelCase name}} of a {{capitalCase ../name}} object by its unique identifier.
+        * @param id The unique identifier of the {{capitalCase ../name}} object
+        */
     clear{{pascalCase name}}(id: string): Promise<void>;
     {{/each}}
+{{/if}}
+{{#if ../$.crud.delete}}
+    /**
+        * Remove a {{capitalCase name}} object by its unique identifier.
+        * @param id The unique identifier of the {{capitalCase name}} object
+        */
     remove(id: string): Promise<void>;
+{{/if}}
 }
+        
 
 class {{pascalCase name}}ServiceImpl implements I{{pascalCase name}}Service {
 
-    constructor(
-        private _baseUrl: string = "http://localhost:8080/{{kebabCase ../$.apiName}}/v1",
-        private _headers: Record<string, any> = {}
-    ) {}
+    private _baseUrl: string = `{{../$.backend.apiUrl}}/{{kebabCase name}}`;
+    private _headers: Record<string, any> = {};
+    {{#unless (equals ../$.authStyle "none")}}
+    private _apiKey: string;
+    {{/unless}}
 
+    constructor(
+        private _opts: I{{pascalCase ../$.backend.name}}ClientOptions
+    ) {
+        if (typeof _opts.baseUrl === 'string') {
+            this._baseUrl = `${_opts.baseUrl}/{{kebabCase name}}`;
+        }
+        if (typeof _opts.headers === 'object') {
+            this._headers = _opts.headers;
+        }
+        {{#unless (equals ../$.authStyle "none")}}
+        if (typeof _opts.apiKey !== 'string') {
+            throw new Error(`[{{pascalCase name}}Service] An API key is required to use the {{capitalCase ../$.backend.name}} API`);
+        }
+        this._apiKey = _opts.apiKey;
+        this._headers['Authorization'] = `Bearer ${this._apiKey}`;
+        {{/unless}}
+    }
+
+{{#if ../$.crud.read}}
     async listAll(
-        opts?: {
-            offset: number;
-            limit: number;
-            sort: I{{pascalCase name}}Sort;
-        }
+        opts?: I{{pascalCase ../$.backend.name}}ListingOptions<I{{pascalCase name}}Sort>
     ): Promise<Array<I{{pascalCase name}}>> {
-        let requestUrl = `${this._baseUrl}/{{kebabCase name}}`;
-        if (opts) {
-            const params = new URLSearchParams();
-            if (opts.offset) { params.append('offset', opts.offset.toString()); }
-            if (opts.limit) { params.append('limit', opts.limit.toString()); }
-            if (opts.sort) { params.append('sort', opts.sort); }
-            requestUrl += `?${params.toString()}`;
-        }
-        const response = await fetch(
-            requestUrl,
-            {
-                headers: this._headers,
-                credentials: 'include'
-            }
-        );
-        if (!response.ok) {
-            throw new Error(`[{{pascalCase name}}Service] Failed calling GET ${requestUrl}: ${response.status} ${response.statusText}`);
-        }
-        return await response.json();
+        // FIXME: Wrap for error handling
+        // TODO: Validate opts
+        return await _makeRequest(this._baseUrl, this._headers, { method: 'GET', query: _listParams(opts) });
     }
 
     async countAll(): Promise<number> {
-        const response = await fetch(
-            `${this._baseUrl}/{{kebabCase name}}/count`,
-            {
-                headers: this._headers,
-                credentials: 'include'
-            }
-        );
-        if (!response.ok) {
-            throw new Error(`[{{pascalCase name}}Service] Failed calling GET ${this._baseUrl}/{{kebabCase name}}/count: ${response.status} ${response.statusText}`);
-        }
-        return await response.json();
+        // FIXME: Wrap for error handling
+        return await _makeRequest(this._baseUrl, this._headers, { method: 'GET', path: '/count' });
     }
 
     async getById(id: string): Promise<I{{pascalCase name}} | null> {
-        const response = await fetch(
-            `${this._baseUrl}/{{kebabCase name}}/${id}`,
-            {
-                headers: this._headers,
-                credentials: 'include'
-            }
-        );
-        if (!response.ok) {
-            throw new Error(`[{{pascalCase name}}Service] Failed calling GET ${this._baseUrl}/{{kebabCase name}}/${id}: ${response.status} ${response.statusText}`);
-        }
-        return await response.json();
+        // FIXME: Wrap for error handling
+        // TODO: Validate ID
+        return await _makeRequest(this._baseUrl, this._headers, { method: 'GET', path: `/${id}` });
     }
 
     async search(
         filter: I{{pascalCase name}}Filter,
-        opts?: {
-            offset: number;
-            limit: number;
-            sort: I{{pascalCase name}}Sort;
-        }
+        opts?: I{{pascalCase ../$.backend.name}}ListingOptions<I{{pascalCase name}}Sort>
     ) {
-        let requestUrl = `${this._baseUrl}/{{kebabCase name}}/search`;
-        if (opts) {
-            const params = new URLSearchParams();
-            if (opts.offset) { params.append('offset', opts.offset.toString()); }
-            if (opts.limit) { params.append('limit', opts.limit.toString()); }
-            if (opts.sort) { params.append('sort', opts.sort); }
-            requestUrl += `?${params.toString()}`;
-        }
-        const response = await fetch(requestUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                ...this._headers
-            },
-            body: JSON.stringify(filter),
-            credentials: 'include'
-        });
-        if (!response.ok) {
-            throw new Error(`[{{pascalCase name}}Service] Failed calling POST ${requestUrl}: ${response.status} ${response.statusText}`);
-        }
-        return await response.json();
+        // FIXME: Wrap for error handling
+        // TODO: Validate filter
+        // TODO: Validate opts
+        return await _makeRequest(this._baseUrl, this._headers, { method: 'POST', path: '/search', query: _listParams(opts), body: filter });
     }
 
     async countFor(filter: I{{pascalCase name}}Filter): Promise<number> {
-        const response = await fetch(`${this._baseUrl}/{{kebabCase name}}/search/count`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                ...this._headers
-            },
-            body: JSON.stringify(filter),
-            credentials: 'include'
-        });
-        if (!response.ok) {
-            throw new Error(`[{{pascalCase name}}Service] Failed calling POST ${this._baseUrl}/{{kebabCase name}}/search/count: ${response.status} ${response.statusText}`);
-        }
-        return await response.json();
+        // FIXME: Wrap for error handling
+        // TODO: Validate filter
+        return await _makeRequest(this._baseUrl, this._headers, { method: 'POST', path: '/search/count', body: filter });
     }
 
+    {{#each associations}}
+    async get{{pascalCase name}}Of(id: string): Promise<I{{pascalCase type.name}} | null> {
+        // FIXME: Wrap for error handling
+        // TODO: Validate ID
+        return await _makeRequest(this._baseUrl, this._headers, { method: 'GET', path: `/${id}/{{kebabCase name}}` });
+    }
+    
+    {{/each}}
+    {{#each reverseAssociations}}
+    async get{{pascalCase name}}Of(id: string): Promise<{{#if isList}}Array<{{/if}}I{{pascalCase type.name}}{{#if isList}}>{{/if}}> {
+        // FIXME: Wrap for error handling
+        // TODO: Validate ID
+        return await _makeRequest(this._baseUrl, this._headers, { method: 'GET', path: `/${id}/{{kebabCase name}}` });
+    }
+    {{/each}}
+{{/if}}
+
+{{#if ../$.crud.create}}
     async create(new{{pascalCase name}}: INew{{pascalCase name}}): Promise<I{{pascalCase name}}> {
-        const response = await fetch(`${this._baseUrl}/{{kebabCase name}}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                ...this._headers
-            },
-            body: JSON.stringify(new{{pascalCase name}}),
-            credentials: 'include'
-        });
-        if (!response.ok) {
-            throw new Error(`[{{pascalCase name}}Service] Failed calling POST ${this._baseUrl}/{{kebabCase name}}: ${response.status} ${response.statusText}`);
-        }
-        return await response.json();
+        // FIXME: Wrap for error handling
+        // TODO: Validate payload
+        return await _makeRequest(this._baseUrl, this._headers, { method: 'POST', body: new{{pascalCase name}} });
     }
-
+{{#if ../$.crud.update}}
+    async upsert(newOrUpdatedEntities: Array<I{{pascalCase name}}>): Promise<Array<I{{pascalCase name}}>> {
+        // FIXME: Wrap for error handling
+        // TODO: Validate payload
+        return await _makeRequest(this._baseUrl, this._headers, { method: 'PUT', body: newOrUpdatedEntities });
+    }
+{{/if}}
+{{/if}}
+{{#if ../$.crud.update}}
+    async fullUpdate(id: string, updated{{pascalCase name}}: INew{{pascalCase name}}): Promise<void> {
+        // FIXME: Wrap for error handling
+        // TODO: Validate ID
+        return await _makeRequest(this._baseUrl, this._headers, { method: 'PUT', path: `/${id}`, body: updated{{pascalCase name}}, noOp: true });
+    }
+    async partialUpdate(id: string, updatedFields: Partial<INew{{pascalCase name}}>): Promise<void> {
+        // FIXME: Wrap for error handling
+        // TODO: Validate ID
+        return await _makeRequest(this._baseUrl, this._headers, { method: 'PATCH', path: `/${id}`, body: updatedFields, noOp: true });
+    }
     {{#each attributes}}
     async update{{pascalCase name}}(id: string, {{camelCase name}}: {{{type.ts}}}): Promise<void> {
-        const requestUrl = `${this._baseUrl}/{{kebabCase ../name}}/${id}/{{kebabCase name}}`;
-        const response = await fetch(requestUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                ...this._headers
-            },
-            body: JSON.stringify({{camelCase name}}),
-            credentials: 'include'
-        });
-        if (!response.ok) {
-            throw new Error(`[{{pascalCase ../name}}Service] Failed calling POST ${requestUrl}: ${response.status} ${response.statusText}`);
-        }
+        // FIXME: Wrap for error handling
+        // TODO: Validate ID
+        // TODO: Validate {{camelCase name}}
+        return await _makeRequest(this._baseUrl, this._headers, { method: 'POST', path: `/${id}/{{kebabCase name}}`, body: {{camelCase name}}, noOp: true });
     }
+    {{#unless validation.isNotNull}}
+    {{#unless validation.isNotEmpty}}
     async clear{{pascalCase name}}(id: string): Promise<void> {
-        const requestUrl = `${this._baseUrl}/{{kebabCase ../name}}/${id}/{{kebabCase name}}`;
-        const response = await fetch(requestUrl, {
-            method: 'DELETE',
-            headers: this._headers,
-            credentials: 'include',
-            body: JSON.stringify("")
-        });
-        if (!response.ok) {
-            throw new Error(`[{{pascalCase ../name}}Service] Failed calling DELETE ${requestUrl}: ${response.status} ${response.statusText}`);
-        }
+        // FIXME: Wrap for error handling
+        // TODO: Validate ID
+        return await _makeRequest(this._baseUrl, this._headers, { method: 'DELETE', path: `/${id}/{{kebabCase name}}`, noOp: true });
     }
+    {{/unless}}
+    {{/unless}}
     {{/each}}
     {{#each associations}}
     async update{{pascalCase name}}(id: string, {{camelCase name}}: string): Promise<void> {
-        const requestUrl = `${this._baseUrl}/{{kebabCase ../name}}/${id}/{{kebabCase name}}`;
-        const response = await fetch(requestUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                ...this._headers
-            },
-            body: JSON.stringify({{camelCase name}}),
-            credentials: 'include'
-        });
-        if (!response.ok) {
-            throw new Error(`[{{pascalCase ../name}}Service] Failed calling POST ${requestUrl}: ${response.status} ${response.statusText}`);
-        }
+        // FIXME: Wrap for error handling
+        // TODO: Validate ID
+        // TODO: Validate {{camelCase name}} ID
+        return await _makeRequest(this._baseUrl, this._headers, { method: 'POST', path: `/${id}/{{kebabCase name}}`, body: {{camelCase name}}, noOp: true });
     }
     async clear{{pascalCase name}}(id: string): Promise<void> {
-        const requestUrl = `${this._baseUrl}/{{kebabCase ../name}}/${id}/{{kebabCase name}}`;
-        const response = await fetch(requestUrl, {
-            method: 'DELETE',
-            headers: this._headers,
-            credentials: 'include',
-            body: JSON.stringify("")
-        });
-        if (!response.ok) {
-            throw new Error(`[{{pascalCase ../name}}Service] Failed calling DELETE ${requestUrl}: ${response.status} ${response.statusText}`);
-        }
+        // FIXME: Wrap for error handling
+        // TODO: Validate ID
+        return await _makeRequest(this._baseUrl, this._headers, { method: 'DELETE', path: `/${id}/{{kebabCase name}}`, noOp: true });
     }
     {{/each}}
+{{/if}}
+{{#if ../$.crud.delete}}
     async remove(id: string): Promise<void> {
-        const response = await fetch(`${this._baseUrl}/{{kebabCase name}}/${id}`, {
-            method: 'DELETE',
-            headers: this._headers,
-            credentials: 'include'
-        });
-        if (!response.ok) {
-            throw new Error(`[{{pascalCase name}}Service] Failed calling DELETE ${this._baseUrl}/{{kebabCase name}}/${id}: ${response.status} ${response.statusText}`);
-        }
+        // FIXME: Wrap for error handling
+        // TODO: Validate ID
+        return await _makeRequest(this._baseUrl, this._headers, { method: 'DELETE', path: `/${id}`, noOp: true });
     }
+{{/if}}
 
 }
 
 export function create{{pascalCase name}}Service(
-    baseUrl: string = "http://localhost:8080/{{kebabCase ../$.apiName}}/v1",
-    headers: Record<string, any> = {}
+    opts: I{{pascalCase ../$.backend.name}}ClientOptions
 ): I{{pascalCase name}}Service {
-    return new {{pascalCase name}}ServiceImpl(baseUrl, headers);
+    return new {{pascalCase name}}ServiceImpl(opts);
 }
 
 {{/each}}
+
+
+export interface I{{pascalCase $.backend.name}}Service {
+    {{#each entities}}
+    readonly {{camelCase name}}: I{{pascalCase name}}Service;
+    {{/each}}
+}
+
+class {{pascalCase $.backend.name}}ServiceImpl implements I{{pascalCase $.backend.name}}Service {
+    {{#each entities}}
+    readonly {{camelCase name}}: I{{pascalCase name}}Service;
+    {{/each}}
+
+    constructor(
+        private _opts: I{{pascalCase $.backend.name}}ClientOptions
+    ) {
+        {{#each entities}}
+        this.{{camelCase name}} = create{{pascalCase name}}Service(_opts);
+        {{/each}}
+    }
+}
+
+export function create{{pascalCase $.backend.name}}Service(
+    opts: I{{pascalCase $.backend.name}}ClientOptions
+): I{{pascalCase $.backend.name}}Service {
+    return new {{pascalCase $.backend.name}}ServiceImpl(opts);
+}
+
+{{#if (equals $.authStyle "login")}}
+
+export interface I{{pascalCase $.backend.name}}UserDetails {
+    /**
+     * ID of the user
+     */
+    id: string;
+    /**
+     * The user's login name
+     */
+    loginName: string;
+    /**
+     * The user's display name
+     */
+    displayName: string;
+}
+
+export interface I{{pascalCase $.backend.name}}LoginResult {
+    /**
+     * The user ID of the logged in user
+     */
+    userId: string;
+    /**
+     * Details about the logged in user
+     */
+    userDetails: I{{pascalCase $.backend.name}}UserDetails;
+    /**
+     * Options to pass to the client services to make them authenticated with the logged in user
+     */
+    clientOptions: I{{pascalCase $.backend.name}}ClientOptions;
+}
+
+export interface I{{pascalCase $.backend.name}}AuthService {
+    /**
+     * Log in to the {{capitalCase $.backend.name}} API using a login name and password.
+     * @param loginName The login name to log in with
+     * @param password The password to log in with
+     * @returns The result of the login, including the user ID, user details, and client options
+     */
+    login(loginName: string, password: string): Promise<I{{pascalCase $.backend.name}}LoginResult>;
+}
+
+class {{pascalCase $.backend.name}}AuthServiceImpl implements I{{pascalCase $.backend.name}}AuthService {
+
+    constructor(
+        private _baseUrl: string = `{{$.backend.apiUrl}}`,
+    ) {
+    }
+
+    async login(loginName: string, password: string): Promise<I{{pascalCase $.backend.name}}LoginResult> {
+        const token = await _makeRequest(this._baseUrl, {}, { method: 'POST', path: '/auth/login', body: { loginName, password }, asText: true });
+        const authenticatedHeaders = { 'Authorization': `Bearer ${token}` };
+        const userDetails = await _makeRequest(this._baseUrl, authenticatedHeaders, { method: 'GET', path: '/auth/me' });
+        return {
+            userId: userDetails.id,
+            userDetails,
+            clientOptions: {
+                baseUrl: this._baseUrl,
+                headers: authenticatedHeaders,
+                apiKey: token
+            }
+        };
+    }
+}
+
+export function create{{pascalCase $.backend.name}}AuthService(
+    baseUrl: string = `{{$.backend.apiUrl}}`
+): I{{pascalCase $.backend.name}}AuthService {
+    return new {{pascalCase $.backend.name}}AuthServiceImpl(baseUrl);
+}
+
+{{/if}}
