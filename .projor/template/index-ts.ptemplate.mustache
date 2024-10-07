@@ -112,7 +112,7 @@ async function _makeRequest(
     }
     if (!response.ok) {
         // FIXME: Better client error handling
-        throw new Error(`Failed calling ${opts.method} ${opts.path || '/'} @ ${baseUrl}: ${response.status} ${response.statusText}`);
+        throw new Error(`Failed calling ${opts.method} ${opts.path || '/'} @ ${baseUrl} with ${JSON.stringify(opts.body)}: ${response.status} ${response.statusText}`);
     }
     if (opts.noOp) {
         return {ok: true};
@@ -126,6 +126,7 @@ async function _makeRequest(
 
 
 {{#each entities}}
+{{#unless masked}}
 /** {{{description}}} */
 export interface I{{pascalCase name}} {
     /** The unique identifier for this {{capitalCase name}} */
@@ -248,6 +249,17 @@ export interface I{{pascalCase name}}Service {
         */
     countFor(filter: I{{pascalCase name}}Filter): Promise<number>;
 
+    {{#each attributes}}
+    {{#unless masked}}
+    /**
+     * Get the {{capitalCase name}} of a {{capitalCase ../name}} object by its unique identifier.
+     * @param id The unique identifier of the {{capitalCase ../name}} object
+     * @returns The {{capitalCase name}} of the given {{capitalCase ../name}} object. Throws an error if the {{capitalCase ../name}} object is not found.
+     */
+    get{{pascalCase name}}Of(id: string): Promise<{{type.ts}} | null>;
+
+    {{/unless}}
+    {{/each}}
     {{#each associations}}
     /**
         * Get the {{capitalCase name}} of a {{capitalCase ../name}} object by its unique identifier.
@@ -408,6 +420,17 @@ class {{pascalCase name}}ServiceImpl implements I{{pascalCase name}}Service {
         return await _makeRequest(this._baseUrl, this._headers, { method: 'POST', path: '/search/count', body: filter });
     }
 
+    {{#each attributes}}
+    {{#unless masked}}
+    async get{{pascalCase name}}Of(id: string): Promise<{{{type.ts}}} | null> {
+        // FIXME: Wrap for error handling
+        // TODO: Validate ID
+        return await _makeRequest(this._baseUrl, this._headers, { method: 'GET', path: `/${id}/{{kebabCase name}}` });
+    }
+
+    {{/unless}}
+    {{/each}}
+
     {{#each associations}}
     async get{{pascalCase name}}Of(id: string): Promise<I{{pascalCase type.name}} | null> {
         // FIXME: Wrap for error handling
@@ -497,25 +520,32 @@ export function create{{pascalCase name}}Service(
     return new {{pascalCase name}}ServiceImpl(opts);
 }
 
+{{/unless}}
 {{/each}}
 
 
 export interface I{{pascalCase $.backend.name}}Service {
     {{#each entities}}
+    {{#unless masked}}
     readonly {{camelCase name}}: I{{pascalCase name}}Service;
+    {{/unless}}
     {{/each}}
 }
 
 class {{pascalCase $.backend.name}}ServiceImpl implements I{{pascalCase $.backend.name}}Service {
     {{#each entities}}
+    {{#unless masked}}
     readonly {{camelCase name}}: I{{pascalCase name}}Service;
+    {{/unless}}
     {{/each}}
 
     constructor(
         private _opts: I{{pascalCase $.backend.name}}ClientOptions
     ) {
         {{#each entities}}
+        {{#unless masked}}
         this.{{camelCase name}} = create{{pascalCase name}}Service(_opts);
+        {{/unless}}
         {{/each}}
     }
 }

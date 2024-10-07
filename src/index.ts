@@ -103,7 +103,9 @@ async function _makeRequest(
     if (!response.ok) {
         // FIXME: Better client error handling
         throw new Error(
-            `Failed calling ${opts.method} ${opts.path || "/"} @ ${baseUrl}: ${
+            `Failed calling ${opts.method} ${
+                opts.path || "/"
+            } @ ${baseUrl} with ${JSON.stringify(opts.body)}: ${
                 response.status
             } ${response.statusText}`
         );
@@ -203,6 +205,13 @@ export interface IOrganizationUnitService {
      * @returns The total number of Organization Unit objects that match the filter
      */
     countFor(filter: IOrganizationUnitFilter): Promise<number>;
+
+    /**
+     * Get the Name of a Organization Unit object by its unique identifier.
+     * @param id The unique identifier of the Organization Unit object
+     * @returns The Name of the given Organization Unit object. Throws an error if the Organization Unit object is not found.
+     */
+    getNameOf(id: string): Promise<string | null>;
 
     /**
      * Get the Employees of a Organization Unit object by its unique identifier.
@@ -340,6 +349,15 @@ class OrganizationUnitServiceImpl implements IOrganizationUnitService {
             method: "POST",
             path: "/search/count",
             body: filter,
+        });
+    }
+
+    async getNameOf(id: string): Promise<string | null> {
+        // FIXME: Wrap for error handling
+        // TODO: Validate ID
+        return await _makeRequest(this._baseUrl, this._headers, {
+            method: "GET",
+            path: `/${id}/name`,
         });
     }
 
@@ -581,6 +599,34 @@ export interface IEmployeeService {
     countFor(filter: IEmployeeFilter): Promise<number>;
 
     /**
+     * Get the First Name of a Employee object by its unique identifier.
+     * @param id The unique identifier of the Employee object
+     * @returns The First Name of the given Employee object. Throws an error if the Employee object is not found.
+     */
+    getFirstNameOf(id: string): Promise<string | null>;
+
+    /**
+     * Get the Last Name of a Employee object by its unique identifier.
+     * @param id The unique identifier of the Employee object
+     * @returns The Last Name of the given Employee object. Throws an error if the Employee object is not found.
+     */
+    getLastNameOf(id: string): Promise<string | null>;
+
+    /**
+     * Get the Birth Date of a Employee object by its unique identifier.
+     * @param id The unique identifier of the Employee object
+     * @returns The Birth Date of the given Employee object. Throws an error if the Employee object is not found.
+     */
+    getBirthDateOf(id: string): Promise<string | null>;
+
+    /**
+     * Get the Last Seen At of a Employee object by its unique identifier.
+     * @param id The unique identifier of the Employee object
+     * @returns The Last Seen At of the given Employee object. Throws an error if the Employee object is not found.
+     */
+    getLastSeenAtOf(id: string): Promise<string | null>;
+
+    /**
      * Get the Org Unit of a Employee object by its unique identifier.
      * @param id The unique identifier of the Employee object
      * @returns The Org Unit of the given Employee object. Throws an error if the Employee object is not found.
@@ -742,6 +788,42 @@ class EmployeeServiceImpl implements IEmployeeService {
             method: "POST",
             path: "/search/count",
             body: filter,
+        });
+    }
+
+    async getFirstNameOf(id: string): Promise<string | null> {
+        // FIXME: Wrap for error handling
+        // TODO: Validate ID
+        return await _makeRequest(this._baseUrl, this._headers, {
+            method: "GET",
+            path: `/${id}/first-name`,
+        });
+    }
+
+    async getLastNameOf(id: string): Promise<string | null> {
+        // FIXME: Wrap for error handling
+        // TODO: Validate ID
+        return await _makeRequest(this._baseUrl, this._headers, {
+            method: "GET",
+            path: `/${id}/last-name`,
+        });
+    }
+
+    async getBirthDateOf(id: string): Promise<string | null> {
+        // FIXME: Wrap for error handling
+        // TODO: Validate ID
+        return await _makeRequest(this._baseUrl, this._headers, {
+            method: "GET",
+            path: `/${id}/birth-date`,
+        });
+    }
+
+    async getLastSeenAtOf(id: string): Promise<string | null> {
+        // FIXME: Wrap for error handling
+        // TODO: Validate ID
+        return await _makeRequest(this._baseUrl, this._headers, {
+            method: "GET",
+            path: `/${id}/last-seen-at`,
         });
     }
 
@@ -980,6 +1062,20 @@ export interface IShiftService {
     countFor(filter: IShiftFilter): Promise<number>;
 
     /**
+     * Get the Begins At of a Shift object by its unique identifier.
+     * @param id The unique identifier of the Shift object
+     * @returns The Begins At of the given Shift object. Throws an error if the Shift object is not found.
+     */
+    getBeginsAtOf(id: string): Promise<string | null>;
+
+    /**
+     * Get the Ends At of a Shift object by its unique identifier.
+     * @param id The unique identifier of the Shift object
+     * @returns The Ends At of the given Shift object. Throws an error if the Shift object is not found.
+     */
+    getEndsAtOf(id: string): Promise<string | null>;
+
+    /**
      * Create a new Shift object.
      * @param newShift The new Shift object to create
      * @returns The newly created Shift object
@@ -1099,6 +1195,24 @@ class ShiftServiceImpl implements IShiftService {
             method: "POST",
             path: "/search/count",
             body: filter,
+        });
+    }
+
+    async getBeginsAtOf(id: string): Promise<string | null> {
+        // FIXME: Wrap for error handling
+        // TODO: Validate ID
+        return await _makeRequest(this._baseUrl, this._headers, {
+            method: "GET",
+            path: `/${id}/begins-at`,
+        });
+    }
+
+    async getEndsAtOf(id: string): Promise<string | null> {
+        // FIXME: Wrap for error handling
+        // TODO: Validate ID
+        return await _makeRequest(this._baseUrl, this._headers, {
+            method: "GET",
+            path: `/${id}/ends-at`,
         });
     }
 

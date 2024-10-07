@@ -9,11 +9,11 @@
 const client = require('../lib/index');
 const { expect } = require('chai');
 
-function randomString(length = 10) {
+function randomString(length = 15) {
     return Math.random().toString(36).substring(2, 2 + length);
 }
 
-function randomInteger(min = 0, max = 100000) {
+function randomInteger(min = 0, max = 100) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
@@ -21,11 +21,11 @@ function randomBoolean() {
     return Math.random() >= 0.5;
 }
 
-function randomFloat(min = 0, max = 1000) {
+function randomFloat(min = 0, max = 1) {
     return Math.random() * (max - min) + min;
 }
 
-function randomDouble(min = 0, max = 1000) {
+function randomDouble(min = 0, max = 1) {
     return Math.random() * (max - min) + min;
 }
 
@@ -45,6 +45,44 @@ function randomLocalDate() {
 
 function randomInstant() {
     return `${randomLocalDate()}T${randomLocalTime()}Z`;
+}
+
+function plusOneInteger(value) {
+    return value + 1;
+}
+
+function plusOneDate(value) {
+    const date = new Date(value);
+    date.setDate(date.getDate() + 1);
+    return date.toISOString().split('T')[0];
+}
+
+function plusOneLocalTime(value) {
+    const parts = value.split(':');
+    let hour = parseInt(parts[0]);
+    let minute = parseInt(parts[1]);
+    let second = parseInt(parts[2]);
+    second++;
+    if (second >= 60) {
+        second = 0;
+        minute++;
+        if (minute >= 60) {
+            minute = 0;
+            hour++;
+            if (hour >= 24) {
+                hour = 0;
+            }
+        }
+    }
+    return `${hour < 10 ? '0' : ''}${hour}:${minute < 10 ? '0' : ''}${minute}:${second < 10 ? '0' : ''}${second}`;
+}
+
+function plusOneInstant(value) {
+    const parts = value.split('T');
+    const date = parts[0];
+    const time = parts[1].split('Z')[0];
+    const newTime = plusOneLocalTime(time);
+    return `${date}T${newTime}Z`;
 }
 
 describe(
@@ -215,8 +253,32 @@ describe(
                     }
                 );
 
-                // New test: Update an attribute with a random value
                 {{#each attributes}}
+                {{#unless masked}}
+                // Query the attribute value
+                it(
+                    "GET /:id/{{camelCase name}} - query attribute {{camelCase name}}",
+                    async () => {
+                        const service = await createService();
+                        // Create a new entity
+                        const new{{pascalCase ../name}} = {
+                            {{#each ../attributes}}
+                            {{camelCase name}}: random{{pascalCase type.name}}(),
+                            {{/each}}
+                            {{#each ../associations}}
+                            {{camelCase name}}Id: null,
+                            {{/each}}
+                        };
+                        const created{{pascalCase ../name}} = await service.create(new{{pascalCase ../name}});
+                        const id = created{{pascalCase ../name}}.id;
+                        // Retrieve the attribute value
+                        const value = await service.get{{pascalCase name}}Of(id); // Returns Promise<{{type.ts}}>
+                        expect(value).to.be.a('{{type.ts}}');
+                        expect(value).to.equal(created{{pascalCase ../name}}.{{camelCase name}});
+                    }
+                );
+
+                // Update an attribute with a random value
                 it(
                     "POST /:id/{{camelCase name}} - update attribute {{camelCase name}}",
                     async () => {
@@ -240,10 +302,7 @@ describe(
                         expect(updated{{pascalCase ../name}}).to.have.property('{{camelCase name}}', updatedValue);
                     }
                 );
-                {{/each}}
 
-                // New test: Clear an attribute
-                {{#each attributes}}
                 {{#unless validation.isNotNull}}
                 {{#unless validation.isNotEmpty}}
                 it(
@@ -270,10 +329,254 @@ describe(
                 );
                 {{/unless}}
                 {{/unless}}
-                {{/each}}
 
-                // New test: Update an association with null and non-null values
+                // Validation tests
+
+                {{#if validation.isNotNull}}
+                it(
+                    "POST / - create {{capitalCase ../name}} with null {{camelCase name}} (expect error)",
+                    async () => {
+                        const service = await createService();
+                        const new{{pascalCase ../name}} = {
+                            {{#each ../attributes}}
+                            {{camelCase name}}: random{{pascalCase type.name}}(),
+                            {{/each}}
+                            {{#each associations}}
+                            {{camelCase name}}Id: null,
+                            {{/each}}
+                        };
+                        new{{pascalCase ../name}}.{{camelCase name}} = null;
+                        let error = null;
+                        try {
+                            await service.create(new{{pascalCase ../name}});
+                        } catch (err) {
+                            error = err;
+                        }
+                        expect(error).to.not.be.null;
+                    }
+                );
+
+                it(
+                    "PUT /:id - full update {{capitalCase ../name}} with null {{camelCase name}} (expect error)",
+                    async () => {
+                        const service = await createService();
+                        const new{{pascalCase ../name}} = {
+                            {{#each ../attributes}}
+                            {{#unless masked}}
+                            {{camelCase name}}: random{{pascalCase type.name}}(),
+                            {{/unless}}
+                            {{/each}}
+                            {{#each associations}}
+                            {{camelCase name}}Id: null,
+                            {{/each}}
+                        };
+                        const created = await service.create(new{{pascalCase ../name}});
+                        const {{camelCase ../name}}Patched = {
+                            ...created,
+                            {{camelCase name}}: null
+                        }
+                        let error = null;
+                        try {
+                            await service.fullUpdate(created.id, {{camelCase ../name}}Patched);
+                        } catch (err) {
+                            error = err;
+                        }
+                        expect(error).to.not.be.null;
+                    }
+                );
+                {{/if}}
+
+
+                {{#if validation.isNotEmpty}}
+                it(
+                    "POST / - create {{capitalCase ../name}} with empty {{camelCase name}} (expect error)",
+                    async () => {
+                        const service = await createService();
+                        const new{{pascalCase ../name}} = {
+                            {{#each ../attributes}}
+                            {{camelCase name}}: random{{pascalCase type.name}}(),
+                            {{/each}}
+                            {{#each associations}}
+                            {{camelCase name}}Id: null,
+                            {{/each}}
+                        };
+                        new{{pascalCase ../name}}.{{camelCase name}} = '';
+                        let error = null;
+                        try {
+                            await service.create(new{{pascalCase ../name}});
+                        } catch (err) {
+                            error = err;
+                        }
+                        expect(error).to.not.be.null;
+                    }
+                );
+
+                it(
+                    "PUT /:id - full update {{capitalCase ../name}} with empty {{camelCase name}} (expect error)",
+                    async () => {
+                        const service = await createService();
+                        const new{{pascalCase ../name}} = {
+                            {{#each ../attributes}}
+                            {{camelCase name}}: random{{pascalCase type.name}}(),
+                            {{/each}}
+                            {{#each associations}}
+                            {{camelCase name}}Id: null,
+                            {{/each}}
+                        };
+                        const created = await service.create(new{{pascalCase ../name}});
+                        const {{camelCase ../name}}Patched = {
+                            ...created,
+                            {{camelCase name}}: ''
+                        }
+                        let error = null;
+                        try {
+                            await service.fullUpdate(created.id, {{camelCase ../name}}Patched);
+                        } catch (err) {
+                            error = err;
+                        }
+                        expect(error).to.not.be.null;
+                    }
+                );
+
+                it(
+                    'POST /:id/{{camelCase name}} - update {{camelCase name}} with empty value (expect error)',
+                    async () => {
+                        const service = await createService();
+                        const new{{pascalCase ../name}} = {
+                            {{#each ../attributes}}
+                            {{camelCase name}}: random{{pascalCase type.name}}(),
+                            {{/each}}
+                            {{#each ../associations}}
+                            {{camelCase name}}Id: null,
+                            {{/each}}
+                        };
+                        const created = await service.create(new{{pascalCase ../name}});
+                        let error = null;
+                        try {
+                            await service.update{{pascalCase name}}(created.id, '');
+                        } catch (err) {
+                            error = err;
+                        }
+                        expect(error).to.not.be.null;
+                    }
+                );
+                {{/if}}
+
+                {{#if validation.isLessThan}}
+                it(
+                    "POST / - create {{capitalCase ../name}} with {{camelCase name}} >= {{validation.isLessThan}} (expect error)",
+                    async () => {
+                        const service = await createService();
+                        const new{{pascalCase ../name}} = {
+                            {{#each ../attributes}}
+                            {{camelCase name}}: random{{pascalCase type.name}}(),
+                            {{/each}}
+                            {{#each associations}}
+                            {{camelCase name}}Id: null,
+                            {{/each}}
+                        };
+                        new{{pascalCase ../name}}.{{camelCase name}} = plusOne{{pascalCase type.name}}(
+                            {{{validation.isLessThan}}}
+                        );
+                        let error = null;
+                        try {
+                            await service.create(new{{pascalCase ../name}});
+                        } catch (err) {
+                            error = err;
+                        }
+                        expect(error).to.not.be.null;
+                    }
+                );
+
+                it(
+                    "PUT /:id - full update {{capitalCase ../name}} with {{camelCase name}} >= {{validation.isLessThan}} (expect error)",
+                    async () => {
+                        const service = await createService();
+                        const new{{pascalCase ../name}} = {
+                            {{#each ../attributes}}
+                            {{camelCase name}}: random{{pascalCase type.name}}(),
+                            {{/each}}
+                            {{#each associations}}
+                            {{camelCase name}}Id: null,
+                            {{/each}}
+                        };
+                        const created = await service.create(new{{pascalCase ../name}});
+                        const {{camelCase ../name}}Patched = {
+                            ...created,
+                            {{camelCase name}}: plusOne{{pascalCase type.name}}(
+                                {{{validation.isLessThan}}}
+                            )
+                        }
+                        let error = null;
+                        try {
+                            await service.fullUpdate(created.id, {{camelCase ../name}}Patched);
+                        } catch (err) {
+                            error = err;
+                        }
+                        expect(error).to.not.be.null;
+                    }
+                );
+
+                it(
+                    'POST /:id/{{camelCase name}} - update {{camelCase name}} with value >= {{validation.isLessThan}} (expect error)',
+                    async () => {
+                        const service = await createService();
+                        const new{{pascalCase ../name}} = {
+                            {{#each ../attributes}}
+                            {{camelCase name}}: random{{pascalCase type.name}}(),
+                            {{/each}}
+                            {{#each ../associations}}
+                            {{camelCase name}}Id: null,
+                            {{/each}}
+                        };
+                        const created = await service.create(new{{pascalCase ../name}});
+                        let error = null;
+                        try {
+                            await service.update{{pascalCase name}}(created.id, plusOne{{pascalCase type.name}}(
+                                {{{validation.isLessThan}}}
+                            ));
+                        } catch (err) {
+                            error = err;
+                        }
+                        expect(error).to.not.be.null;
+                    }
+                );
+                {{/if}}
+
+                {{/unless}}
+                {{/each}}
+                
                 {{#each associations}}
+
+                // Query the association value
+                it(
+                    "GET /:id/{{camelCase name}} - query association {{camelCase name}}",
+                    async () => {
+                        const service = await createService();
+                        // Create related entity
+                        const related{{pascalCase name}}Service = await client.create{{pascalCase type.name}}Service(clientOpts);
+                        const related{{pascalCase name}} = await related{{pascalCase name}}Service.create({
+                            {{#each type.attributes}}
+                            {{camelCase name}}: random{{pascalCase type.name}}(),
+                            {{/each}}
+                        });
+                        // Create a new entity with the association set
+                        const new{{pascalCase ../name}} = {
+                            {{#each ../attributes}}
+                            {{camelCase name}}: random{{pascalCase type.name}}(),
+                            {{/each}}
+                            {{camelCase name}}Id: related{{pascalCase name}}.id
+                        };
+                        const created{{pascalCase ../name}} = await service.create(new{{pascalCase ../name}});
+                        const id = created{{pascalCase ../name}}.id;
+                        // Retrieve the association value
+                        const value = await service.get{{pascalCase name}}Of(id); // Returns Promise<{{pascalCase type.name}}>
+                        expect(value).to.be.an('object');
+                        expect(value).to.have.property('id', related{{pascalCase name}}.id);
+                    }
+                );
+
+                // Update an association with null and non-null values
                 it(
                     "POST /:id/{{camelCase name}} - update association {{camelCase name}} with non-null value",
                     async () => {
@@ -327,6 +630,47 @@ describe(
                         // Retrieve and verify the association is cleared
                         const updated{{pascalCase ../name}} = await service.getById(id);
                         expect(updated{{pascalCase ../name}}['{{camelCase name}}Id']).to.be.null;
+                    }
+                );
+                {{/each}}
+
+                {{#each reverseAssociations}}
+                // Query the reverse association value
+                it(
+                    "GET /:id/{{camelCase name}} - query reverse association {{camelCase name}}",
+                    async () => {
+                        const service = await createService();
+                        // Create a new entity with the reverse association set
+                        const new{{pascalCase ../name}} = {
+                            {{#each ../attributes}}
+                            {{camelCase name}}: random{{pascalCase type.name}}(),
+                            {{/each}}
+                            {{#each ../associations}}
+                            {{camelCase name}}Id: null,
+                            {{/each}}
+                        };
+                        const created{{pascalCase ../name}} = await service.create(new{{pascalCase ../name}});
+
+                        // Create related entity
+                        const related{{pascalCase name}}Service = await client.create{{pascalCase type.name}}Service(clientOpts);
+                        const related{{pascalCase name}} = await related{{pascalCase name}}Service.create({
+                            {{#each type.attributes}}
+                            {{camelCase name}}: random{{pascalCase type.name}}(),
+                            {{/each}}
+                            {{camelCase mappedBy}}Id: created{{pascalCase ../name}}.id
+                        });
+                        
+                        {{#if isList}}
+                        const value = await service.get{{pascalCase name}}Of(created{{pascalCase ../name}}.id); // Returns Promise<{{pascalCase type.name}}[]>
+                        expect(value).to.be.an('array');
+                        expect(value.length).to.be.greaterThanOrEqual(1);
+                        const found = value.some(e => e.id === related{{pascalCase name}}.id);
+                        expect(found).to.be.true;
+                        {{else}}
+                        const value = await service.get{{pascalCase name}}Of(created{{pascalCase ../name}}.id); // Returns Promise<{{pascalCase type.name}}>
+                        expect(value).to.be.an('object');
+                        expect(value).to.have.property('id', related{{pascalCase name}}.id);
+                        {{/if}}
                     }
                 );
                 {{/each}}
@@ -437,6 +781,118 @@ describe(
                     }
                 );
 
+                // Perform a full update on an entity and check the updated values
+                it(
+                    "PUT /:id - full update {{capitalCase name}}",
+                    async () => {
+                        const service = await createService();
+                        // Create a new entity
+                        const new{{pascalCase name}} = {
+                            {{#each attributes}}
+                            {{camelCase name}}: random{{pascalCase type.name}}(),
+                            {{/each}}
+                            {{#each associations}}
+                            {{camelCase name}}Id: null,
+                            {{/each}}
+                        };
+                        {{#each associations}}
+                        const related{{pascalCase name}}Service = await client.create{{pascalCase type.name}}Service(clientOpts);
+                        const related{{pascalCase name}}s = [
+                            await related{{pascalCase name}}Service.create({
+                                {{#each type.attributes}}
+                                {{camelCase name}}: random{{pascalCase type.name}}(),
+                                {{/each}}
+                            }),
+                            await related{{pascalCase name}}Service.create({
+                                {{#each type.attributes}}
+                                {{camelCase name}}: random{{pascalCase type.name}}(),
+                                {{/each}}
+                            })
+                        ];
+                        new{{pascalCase ../name}}.{{camelCase name}}Id = related{{pascalCase name}}s[0].id;
+                        {{/each}}
+                        const created{{pascalCase name}} = await service.create(new{{pascalCase name}});
+                        const id = created{{pascalCase name}}.id;
+                        // Update the entity
+                        const updated{{pascalCase name}} = {
+                            id: id,
+                            {{#each attributes}}
+                            {{camelCase name}}: random{{pascalCase type.name}}(),
+                            {{/each}}
+                            {{#each associations}}
+                            {{camelCase name}}Id: related{{pascalCase name}}s[1].id,
+                            {{/each}}
+                        };
+                        await service.fullUpdate(id, updated{{pascalCase name}});
+                        // Retrieve and verify the updated entity
+                        const retrieved{{pascalCase name}} = await service.getById(id);
+                        expect(retrieved{{pascalCase name}}).to.be.an('object');
+                        expect(retrieved{{pascalCase name}}).to.have.property('id', id);
+                        {{#each attributes}}
+                        expect(retrieved{{pascalCase ../name}}).to.have.property('{{camelCase name}}', updated{{pascalCase ../name}}.{{camelCase name}});
+                        {{/each}}
+                        {{#each associations}}
+                        expect(retrieved{{pascalCase ../name}}).to.have.property('{{camelCase name}}Id', updated{{pascalCase ../name}}.{{camelCase name}}Id);
+                        {{/each}}
+                    }
+                );
+
+                // Perform a partial update on an entity and check the updated values
+                it(
+                    "PATCH /:id - partial update {{capitalCase name}}",
+                    async () => {
+                        const service = await createService();
+                        // Create a new entity
+                        const new{{pascalCase name}} = {
+                            {{#each attributes}}
+                            {{camelCase name}}: random{{pascalCase type.name}}(),
+                            {{/each}}
+                            {{#each associations}}
+                            {{camelCase name}}Id: null,
+                            {{/each}}
+                        };
+                        {{#each associations}}
+                        const related{{pascalCase name}}Service = await client.create{{pascalCase type.name}}Service(clientOpts);
+                        const related{{pascalCase name}}s = [
+                            await related{{pascalCase name}}Service.create({
+                                {{#each type.attributes}}
+                                {{camelCase name}}: random{{pascalCase type.name}}(),
+                                {{/each}}
+                            }),
+                            await related{{pascalCase name}}Service.create({
+                                {{#each type.attributes}}
+                                {{camelCase name}}: random{{pascalCase type.name}}(),
+                                {{/each}}
+                            })
+                        ];
+                        new{{pascalCase ../name}}.{{camelCase name}}Id = related{{pascalCase name}}s[0].id;
+                        {{/each}}
+                        const created{{pascalCase name}} = await service.create(new{{pascalCase name}});
+                        const id = created{{pascalCase name}}.id;
+                        // Update the entity
+                        const updated{{pascalCase name}} = {
+                            id: id,
+                            {{#each attributes}}
+                            {{camelCase name}}: random{{pascalCase type.name}}(),
+                            {{/each}}
+                            {{#each associations}}
+                            {{camelCase name}}Id: related{{pascalCase name}}s[1].id,
+                            {{/each}}
+                        };
+                        await service.partialUpdate(id, updated{{pascalCase name}});
+                        // Retrieve and verify the updated entity
+                        const retrieved{{pascalCase name}} = await service.getById(id);
+                        expect(retrieved{{pascalCase name}}).to.be.an('object');
+                        expect(retrieved{{pascalCase name}}).to.have.property('id', id);
+                        {{#each attributes}}
+                        expect(retrieved{{pascalCase ../name}}).to.have.property('{{camelCase name}}', updated{{pascalCase ../name}}.{{camelCase name}});
+                        {{/each}}
+                        {{#each associations}}
+                        expect(retrieved{{pascalCase ../name}}).to.have.property('{{camelCase name}}Id', updated{{pascalCase ../name}}.{{camelCase name}}Id);
+                        {{/each}}
+
+                    }
+                );
             }
         );
         {{/each}}
